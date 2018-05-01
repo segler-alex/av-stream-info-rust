@@ -1,8 +1,8 @@
 [package]
 name = "av-stream-info-rust"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["segler <segler_alex@web.de>"]
-repository = "https://github.com/segler-alex/audio-stream-info-rust"
+repository = "https://github.com/segler-alex/av-stream-info-rust"
 categories = ["network-programming", "parsing"]
 license = "MIT"
 description = "Analyze a http/https internet address and display information if an audio or video stream has been found. All information is extracted from metainformation."
