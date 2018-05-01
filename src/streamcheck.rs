@@ -153,7 +153,16 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                                             let mut codecs: String = String::new();
                                             let codecs_obj = i.codecs();
                                             if let Some(codecs_obj) = codecs_obj {
-                                                codecs = decode_hls_codecs(&codecs_obj.to_string()).join(",");
+                                                let (audio,video) = decode_hls_codecs(&codecs_obj.to_string());
+                                                match video {
+                                                    Some(video)=>{
+                                                        codecs = format!("{},{}", audio, video);
+                                                    }
+                                                    None=>{
+                                                        codecs = audio;
+                                                    }
+                                                }
+                                                
                                             }
                                             let stream = StreamInfo {
                                                 Url: String::from(url),
@@ -305,54 +314,56 @@ fn decode_playlist(url_str: &str, content: &str, check_all: bool, timeout: u32, 
     list
 }
 
-fn decode_hls_codecs(codecs_raw: &str) -> Vec<String> {
+fn decode_hls_codecs(codecs_raw: &str) -> (String,Option<String>) {
     // codec information from
     // https://developer.apple.com/library/content/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/FrequentlyAskedQuestions/FrequentlyAskedQuestions.html
 
-    let mut codecs = vec![];
+    let mut codec_audio: String = String::from("UNKNOWN");
+    let mut codec_video: Option<String> = None;
+
     if codecs_raw.contains("mp4a.40.2") {
         // AAC-LC
-        codecs.push(String::from("AAC"));
+        codec_audio = String::from("AAC");
     }
     if codecs_raw.contains("mp4a.40.5") {
         // HE-AAC
-        codecs.push(String::from("AAC+"));
+        codec_audio = String::from("AAC+");
     }
     if codecs_raw.contains("mp4a.40.34") {
-        codecs.push(String::from("MP3"));
+        codec_audio = String::from("MP3");
     }
     if codecs_raw.contains("avc1.42001e") || codecs_raw.contains("avc1.66.30") {
         // H.264 Baseline Profile level 3.0
-        codecs.push(String::from("H.264"));
+        codec_video = Some(String::from("H.264"));
     }
     if codecs_raw.contains("avc1.42001f") {
         // H.264 Baseline Profile level 3.1
-        codecs.push(String::from("H.264"));
+        codec_video = Some(String::from("H.264"));
     }
     if codecs_raw.contains("avc1.4d001e") || codecs_raw.contains("avc1.77.30") {
         // H.264 Main Profile level 3.0
-        codecs.push(String::from("H.264"));
+        codec_video = Some(String::from("H.264"));
     }
     if codecs_raw.contains("avc1.4d001f") {
         // H.264 Main Profile level 3.1
-        codecs.push(String::from("H.264"));
+        codec_video = Some(String::from("H.264"));
     }
     if codecs_raw.contains("avc1.4d0028") {
         // H.264 Main Profile level 4.0
-        codecs.push(String::from("H.264"));
+        codec_video = Some(String::from("H.264"));
     }
     if codecs_raw.contains("avc1.64001f") {
         // H.264 High Profile level 3.1
-        codecs.push(String::from("H.264"));
+        codec_video = Some(String::from("H.264"));
     }
     if codecs_raw.contains("avc1.640028") {
         // H.264 High Profile level 4.0
-        codecs.push(String::from("H.264"));
+        codec_video = Some(String::from("H.264"));
     }
     if codecs_raw.contains("avc1.640029") {
         // H.264 High Profile level 4.1
-        codecs.push(String::from("H.264"));
+        codec_video = Some(String::from("H.264"));
     }
 
-    codecs
+    return (codec_audio,codec_video);
 }
