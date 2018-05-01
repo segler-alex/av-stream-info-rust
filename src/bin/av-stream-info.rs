@@ -29,7 +29,7 @@ fn main() {
             for item in list.iter() {
                 match item {
                     &Ok(ref item) => {
-                        println!("+ {} (MSG: {})", item.Url, "OK".green());
+                        println!("+ {} Codec='{}' Bitrate='{}' (MSG: {})", item.Url, item.Codec, item.Bitrate, "OK".green());
                         break;
                     }
                     &Err(ref e) => {
