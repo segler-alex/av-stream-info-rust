@@ -26,13 +26,14 @@ fn main() {
     match env::args().nth(1) {
         Some(url) => {
             let list = check(&url, tcp_timeout, max_depth, retries);
-            for item in list.iter() {
+            for item in list {
                 match item {
-                    &Ok(ref item) => {
-                        println!("+ {} Codec='{}' Bitrate='{}' (MSG: {})", item.Url, item.Codec, item.Bitrate, "OK".green());
+                    Ok(item) => {
+                        let codec_video = item.CodecVideo.unwrap_or(String::from("NONE"));
+                        println!("+ {} Audio='{}' Video='{}' Bitrate='{}' (MSG: {})", item.Url, item.CodecAudio, codec_video, item.Bitrate, "OK".green());
                         break;
                     }
-                    &Err(ref e) => {
+                    Err(e) => {
                         println!("- {} (MSG: {})", e.Url, e.Msg.red());
                     }
                 }

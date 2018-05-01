@@ -17,7 +17,8 @@ pub struct StreamInfo {
     pub Genre: String,
     pub Bitrate: u32,
     pub Sampling: u32,
-    pub Codec: String,
+    pub CodecAudio: String,
+    pub CodecVideo: Option<String>,
     pub Hls: bool,
 }
 
@@ -150,19 +151,13 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                                 match playlist{
                                     Ok(playlist)=>{
                                         for i in playlist.stream_inf_tags() {
-                                            let mut codecs: String = String::new();
+                                            let mut audio = String::from("UNKNOWN");
+                                            let mut video: Option<String> = None;
                                             let codecs_obj = i.codecs();
                                             if let Some(codecs_obj) = codecs_obj {
-                                                let (audio,video) = decode_hls_codecs(&codecs_obj.to_string());
-                                                match video {
-                                                    Some(video)=>{
-                                                        codecs = format!("{},{}", audio, video);
-                                                    }
-                                                    None=>{
-                                                        codecs = audio;
-                                                    }
-                                                }
-                                                
+                                                let (a,v) = decode_hls_codecs(&codecs_obj.to_string());
+                                                audio = a;
+                                                video = v;
                                             }
                                             let stream = StreamInfo {
                                                 Url: String::from(url),
@@ -173,7 +168,8 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                                                 Bitrate: (i.bandwidth() as u32) / 1000,
                                                 Genre: String::from(""),
                                                 Sampling: 0,
-                                                Codec: codecs,
+                                                CodecAudio: audio,
+                                                CodecVideo: video,
                                                 Hls: true,
                                             };
                                             list.push(Ok(stream));
@@ -190,7 +186,8 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                                             Bitrate: 0,
                                             Genre: String::from(""),
                                             Sampling: 0,
-                                            Codec: String::from("UNKNOWN"),
+                                            CodecAudio: String::from("UNKNOWN"),
+                                            CodecVideo: None,
                                             Hls: true,
                                         };
                                         list.push(Ok(stream));
@@ -237,7 +234,8 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                             .unwrap_or(&String::from(""))
                             .parse()
                             .unwrap_or(0),
-                        Codec: stream_type,
+                        CodecAudio: stream_type,
+                        CodecVideo: None,
                         Hls: false,
                     };
                     list.push(Ok(stream));
