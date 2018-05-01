@@ -151,10 +151,10 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                                     Ok(playlist)=>{
                                         for i in playlist.stream_inf_tags() {
                                             let mut codecs: String = String::new();
-                                            /*let codecs_obj = i.codecs();
+                                            let codecs_obj = i.codecs();
                                             if let Some(codecs_obj) = codecs_obj {
-                                                codecs = codecs_obj.to_string();
-                                            }*/
+                                                codecs = decode_hls_codecs(&codecs_obj.to_string());
+                                            }
                                             let stream = StreamInfo {
                                                 Url: String::from(url),
                                                 Type: String::from(""),
@@ -167,7 +167,6 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                                                 Codec: codecs,
                                                 Hls: true,
                                             };
-                                            //println!("{:?}", stream);
                                             list.push(Ok(stream));
                                             break;
                                         }
@@ -304,4 +303,18 @@ fn decode_playlist(url_str: &str, content: &str, check_all: bool, timeout: u32, 
     }
 
     list
+}
+
+fn decode_hls_codecs(codecs_raw: &str) -> String {
+    let mut codecs = vec![];
+    if codecs_raw.contains("mp4a.40.2") {
+        codecs.push(String::from("AAC"));
+    }
+    if codecs_raw.contains("mp4a.40.5") {
+        codecs.push(String::from("AAC+"));
+    }
+    if codecs_raw.contains("mp4a.40.34") {
+        codecs.push(String::from("MP3"));
+    }
+    codecs.join(",")
 }
