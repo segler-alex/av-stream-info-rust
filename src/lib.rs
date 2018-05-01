@@ -13,7 +13,7 @@ mod streamcheck;
 use std::time::Duration;
 use std::thread;
 
-/// Decode playlist content string. It checks for M3U, PLS, XSPF and ASX content in the string.
+/// Check url for audio/video stream.
 /// # Example
 /// ```rust
 /// let list = av_stream_info_rust::check("https://example.com/test.m3u", 10, 3, 3);
