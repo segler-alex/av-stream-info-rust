@@ -161,7 +161,7 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                                                 Name: String::from(""),
                                                 Description: String::from(""),
                                                 Homepage: String::from(""),
-                                                Bitrate: i.bandwidth() as u32,
+                                                Bitrate: (i.bandwidth() as u32) / 1000,
                                                 Genre: String::from(""),
                                                 Sampling: 0,
                                                 Codec: codecs,
