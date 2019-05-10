@@ -83,7 +83,7 @@ impl Request {
         stream.set_read_timeout(Some(Duration::from_secs(timeout as u64)))?;
 
         if url.scheme() == "https" {
-            let connector = TlsConnector::builder()?.build()?;
+            let connector = TlsConnector::builder().build()?;
             let mut stream = connector.connect(host, stream)?;
             let mut host_str = String::from(host);
             if port != 443{

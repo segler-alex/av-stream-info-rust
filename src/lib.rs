@@ -33,7 +33,7 @@ pub fn check(
     retries: u8,
 ) -> Vec<streamcheck::StreamCheckResult> {
     let mut working = false;
-    let mut list = vec![];
+    let mut list: Vec<streamcheck::StreamCheckResult> = Vec::new();
 
     for _i in 0..retries {
         list = streamcheck::check(url, false, timeout, max_depth);
