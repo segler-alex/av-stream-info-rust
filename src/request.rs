@@ -57,7 +57,7 @@ use std::vec::IntoIter;
 
 fn connect(addrs: Box<IntoIter<SocketAddr>>, timeout: u32) -> BoxResult<TcpStream> {
     for addr in addrs {
-        let mut stream = TcpStream::connect_timeout(
+        let stream = TcpStream::connect_timeout(
             &addr,
             Duration::from_secs(timeout as u64),
         );
