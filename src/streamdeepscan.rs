@@ -6,8 +6,12 @@ pub struct ScanResult{
     pub mime: String
 }
 
-pub fn scan(bytes: &[u8]) -> Result<ScanResult, Box<std::error::Error>> {
+pub fn scan(bytes: &[u8]) -> Result<Option<ScanResult>, Box<std::error::Error>> {
     let mime = tree_magic::from_u8(bytes);
     debug!("found mime type: {}", mime);
-    Ok(ScanResult{mime})
+    if mime != "application/octet-stream" {
+        Ok(Some(ScanResult{mime}))
+    }else{
+        Ok(None)
+    }
 }

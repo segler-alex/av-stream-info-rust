@@ -201,10 +201,12 @@ fn handle_stream(mut request: Request, url: &str, mut stream_type: String, deep_
             let bytes = request.bytes();
             let scan_result = streamdeepscan::scan(bytes);
             if let Ok(scan_result) = scan_result {
-                let x = type_is_stream(&scan_result.mime);
-                if let Some(x) = x {
-                    stream_type = String::from(x);
-                    debug!("url={}, override stream_type of with deep scan: {}", url, stream_type);
+                if let Some(scan_result) = scan_result {
+                    let x = type_is_stream(&scan_result.mime);
+                    if let Some(x) = x {
+                        stream_type = String::from(x);
+                        debug!("url={}, override stream_type of with deep scan: {}", url, stream_type);
+                    }
                 }
             }
         }
