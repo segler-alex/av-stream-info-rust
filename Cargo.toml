@@ -6,6 +6,7 @@ repository = "https://github.com/segler-alex/av-stream-info-rust"
 categories = ["network-programming", "parsing"]
 license = "MIT"
 description = "Analyze a http/https internet address and display information if an audio or video stream has been found. All information is extracted from metainformation."
+readme = "README.md"
 
 [dependencies]
 colored = "1.8.0"
