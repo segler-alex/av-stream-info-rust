@@ -5,7 +5,9 @@ use std::fmt;
 use playlist_decoder;
 use url::Url;
 use hls_m3u8::MasterPlaylist;
-//use hls_m3u8::types::QuotedString;
+use streamdeepscan;
+
+use log::{debug};
 
 #[derive(Debug)]
 pub struct StreamInfo {
@@ -95,6 +97,7 @@ fn type_is_stream(content_type: &str) -> Option<&str> {
         "audio/aacp" => Some("AAC+"),
         "audio/ogg" => Some("OGG"),
         "application/ogg" => Some("OGG"),
+        "video/ogg" => Some("OGG"),
         "audio/flac" => Some("FLAC"),
         "application/flv" => Some("FLV"),
         "application/octet-stream" => Some("UNKNOWN"),
@@ -102,143 +105,173 @@ fn type_is_stream(content_type: &str) -> Option<&str> {
     }
 }
 
+enum LinkType {
+    Stream(String),
+    Playlist,
+    Other
+}
+
+fn get_type(content_type: &str, content_length: Option<usize>) -> LinkType {
+    let content_type_lower = content_type.to_lowercase();
+    if type_is_playlist(&content_type_lower) || content_length.is_some() {
+        LinkType::Playlist
+    } else if type_is_stream(&content_type_lower).is_some() {
+        LinkType::Stream(String::from(type_is_stream(&content_type_lower).unwrap_or("")))
+    } else {
+        LinkType::Other
+    }
+}
+
+fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<StreamCheckResult> {
+    let mut list: Vec<StreamCheckResult> = vec![];
+    let read_result = request.read_content();
+    match read_result {
+        Ok(_)=>{
+            let content = request.text();
+            let is_hls = playlist_decoder::is_content_hls(&content);
+            if is_hls {
+                let playlist = content.parse::<MasterPlaylist>();
+                match playlist{
+                    Ok(playlist)=>{
+                        for i in playlist.stream_inf_tags() {
+                            let mut audio = String::from("UNKNOWN");
+                            let mut video: Option<String> = None;
+                            let codecs_obj = i.codecs();
+                            if let Some(codecs_obj) = codecs_obj {
+                                let (a,v) = decode_hls_codecs(&codecs_obj.to_string());
+                                audio = a;
+                                video = v;
+                            }
+                            let stream = StreamInfo {
+                                Url: String::from(url),
+                                Type: String::from(""),
+                                Name: String::from(""),
+                                Description: String::from(""),
+                                Homepage: String::from(""),
+                                Bitrate: (i.bandwidth() as u32) / 1000,
+                                Genre: String::from(""),
+                                Sampling: 0,
+                                CodecAudio: audio,
+                                CodecVideo: video,
+                                Hls: true,
+                            };
+                            list.push(Ok(stream));
+                            break;
+                        }
+                    }
+                    Err(_)=>{
+                        let stream = StreamInfo {
+                            Url: String::from(url),
+                            Type: String::from(""),
+                            Name: String::from(""),
+                            Description: String::from(""),
+                            Homepage: String::from(""),
+                            Bitrate: 0,
+                            Genre: String::from(""),
+                            Sampling: 0,
+                            CodecAudio: String::from("UNKNOWN"),
+                            CodecVideo: None,
+                            Hls: true,
+                        };
+                        list.push(Ok(stream));
+                    }
+                }
+            }else{
+                let playlist = decode_playlist(url, &content,check_all, timeout, max_depth - 1);
+                if playlist.len() == 0 {
+                    list.push(Err(StreamCheckError::new(url, "Empty playlist")));
+                } else {
+                    list.extend(playlist);
+                }
+            }
+        }
+        Err(err)=>{
+            list.push(Err(StreamCheckError::new(url, &err.to_string())));
+        }
+    }
+    list
+}
+
+fn handle_stream(mut request: Request, url: &str, mut stream_type: String, deep_scan: bool) -> StreamInfo {
+    debug!("handle_stream(url={})", url);
+
+    if deep_scan {
+        let result = request.read_up_to(50);
+        if result.is_ok(){
+            let bytes = request.bytes();
+            let scan_result = streamdeepscan::scan(bytes);
+            if let Ok(scan_result) = scan_result {
+                let x = type_is_stream(&scan_result.mime);
+                if let Some(x) = x {
+                    stream_type = String::from(x);
+                    debug!("url={}, override stream_type of with deep scan: {}", url, stream_type);
+                }
+            }
+        }
+    }
+
+    let headers = request.info.headers;
+    let stream = StreamInfo {
+        Url: String::from(url),
+        Type: headers
+            .get("content-type")
+            .unwrap_or(&String::from(""))
+            .clone(),
+        Name: headers.get("icy-name").unwrap_or(&String::from("")).clone(),
+        Description: headers
+            .get("icy-description")
+            .unwrap_or(&String::from(""))
+            .clone(),
+        Homepage: headers.get("icy-url").unwrap_or(&String::from("")).clone(),
+        Bitrate: headers
+            .get("icy-br")
+            .unwrap_or(&String::from(""))
+            .parse()
+            .unwrap_or(0),
+        Genre: headers
+            .get("icy-genre")
+            .unwrap_or(&String::from(""))
+            .clone(),
+        Sampling: headers
+            .get("icy-sr")
+            .unwrap_or(&String::from(""))
+            .parse()
+            .unwrap_or(0),
+        CodecAudio: stream_type,
+        CodecVideo: None,
+        Hls: false,
+    };
+
+    stream
+}
+
 pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<StreamCheckResult> {
+    debug!("check(url={})",url);
     if max_depth == 0{
         return vec![Err(StreamCheckError::new(url, "max depth reached"))];
     }
     let request = Request::new(&url, "StreamCheckBot/0.1.0", timeout);
     let mut list: Vec<StreamCheckResult> = vec![];
     match request {
-        Ok(mut request) => {
+        Ok(request) => {
             if request.info.code >= 200 && request.info.code < 300 {
-                let mut is_playlist = false;
-                let mut is_stream = false;
-                let mut stream_type = String::from("");
-                {
-                    let content_type = request.info.headers.get("content-type");
-                    match content_type {
-                        Some(content_type) => {
-                            let content_type_lower = content_type.to_lowercase();
-                            if type_is_playlist(&content_type_lower) {
-                                is_playlist = true;
-                            } else if type_is_stream(&content_type_lower).is_some() {
-                                stream_type =
-                                    String::from(type_is_stream(&content_type_lower).unwrap_or(""));
-                                is_stream = true;
-                            } else {
-                                list.push(Err(StreamCheckError::new(
-                                    url,
-                                    &format!("unknown content type {}", content_type_lower),
-                                )));
-                            }
-                        }
-                        None => {
-                            list.push(Err(StreamCheckError::new(
-                                url,
-                                "Missing content-type in http header",
-                            )));
-                        }
+                let content_type = request.info.headers.get("content-type");
+                let content_length = request.content_length().ok();
+                match content_type {
+                    Some(content_type) => {
+                        let link_type = get_type(content_type, content_length);
+                        match link_type {
+                            LinkType::Playlist => list.extend(handle_playlist(request, url, check_all, timeout, max_depth)),
+                            LinkType::Stream(stream_type) => list.push(Ok(handle_stream(request, url, stream_type, true))),
+                            _ => list.push(Err(StreamCheckError::new(url,&format!("unknown content type {}", content_type),)))
+                        };
                     }
-                }
-                if is_playlist {
-                    let read_result = request.read_content();
-                    match read_result {
-                        Ok(_)=>{
-                            let content = request.get_content();
-                            let is_hls = playlist_decoder::is_content_hls(&content);
-                            if is_hls {
-                                let playlist = content.parse::<MasterPlaylist>();
-                                match playlist{
-                                    Ok(playlist)=>{
-                                        for i in playlist.stream_inf_tags() {
-                                            let mut audio = String::from("UNKNOWN");
-                                            let mut video: Option<String> = None;
-                                            let codecs_obj = i.codecs();
-                                            if let Some(codecs_obj) = codecs_obj {
-                                                let (a,v) = decode_hls_codecs(&codecs_obj.to_string());
-                                                audio = a;
-                                                video = v;
-                                            }
-                                            let stream = StreamInfo {
-                                                Url: String::from(url),
-                                                Type: String::from(""),
-                                                Name: String::from(""),
-                                                Description: String::from(""),
-                                                Homepage: String::from(""),
-                                                Bitrate: (i.bandwidth() as u32) / 1000,
-                                                Genre: String::from(""),
-                                                Sampling: 0,
-                                                CodecAudio: audio,
-                                                CodecVideo: video,
-                                                Hls: true,
-                                            };
-                                            list.push(Ok(stream));
-                                            break;
-                                        }
-                                    }
-                                    Err(_)=>{
-                                        let stream = StreamInfo {
-                                            Url: String::from(url),
-                                            Type: String::from(""),
-                                            Name: String::from(""),
-                                            Description: String::from(""),
-                                            Homepage: String::from(""),
-                                            Bitrate: 0,
-                                            Genre: String::from(""),
-                                            Sampling: 0,
-                                            CodecAudio: String::from("UNKNOWN"),
-                                            CodecVideo: None,
-                                            Hls: true,
-                                        };
-                                        list.push(Ok(stream));
-                                    }
-                                }
-                            }else{
-                                let playlist = decode_playlist(url, &content,check_all, timeout, max_depth - 1);
-                                if playlist.len() == 0 {
-                                    list.push(Err(StreamCheckError::new(url, "Empty playlist")));
-                                } else {
-                                    list.extend(playlist);
-                                }
-                            }
-                        }
-                        Err(err)=>{
-                            list.push(Err(StreamCheckError::new(url, &err.to_string())));
-                        }
+                    None => {
+                        list.push(Err(StreamCheckError::new(
+                            url,
+                            "Missing content-type in http header",
+                        )));
                     }
-                } else if is_stream {
-                    let headers = request.info.headers;
-                    let stream = StreamInfo {
-                        Url: String::from(url),
-                        Type: headers
-                            .get("content-type")
-                            .unwrap_or(&String::from(""))
-                            .clone(),
-                        Name: headers.get("icy-name").unwrap_or(&String::from("")).clone(),
-                        Description: headers
-                            .get("icy-description")
-                            .unwrap_or(&String::from(""))
-                            .clone(),
-                        Homepage: headers.get("icy-url").unwrap_or(&String::from("")).clone(),
-                        Bitrate: headers
-                            .get("icy-br")
-                            .unwrap_or(&String::from(""))
-                            .parse()
-                            .unwrap_or(0),
-                        Genre: headers
-                            .get("icy-genre")
-                            .unwrap_or(&String::from(""))
-                            .clone(),
-                        Sampling: headers
-                            .get("icy-sr")
-                            .unwrap_or(&String::from(""))
-                            .parse()
-                            .unwrap_or(0),
-                        CodecAudio: stream_type,
-                        CodecVideo: None,
-                        Hls: false,
-                    };
-                    list.push(Ok(stream));
                 }
             } else if request.info.code >= 300 && request.info.code < 400 {
                 let location = request.info.headers.get("location");

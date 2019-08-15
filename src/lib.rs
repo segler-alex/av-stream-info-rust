@@ -6,9 +6,13 @@ extern crate native_tls;
 extern crate playlist_decoder;
 extern crate url;
 extern crate hls_m3u8;
+extern crate log;
+
+extern crate tree_magic;
 
 mod request;
 mod streamcheck;
+mod streamdeepscan;
 
 use std::time::Duration;
 use std::thread;

@@ -48,7 +48,7 @@ pub struct Request {
     pub info: HttpHeaders,
     readable: Box<Read>,
     content_read_done: bool,
-    content: String,
+    content_vec: Vec<u8>,
 }
 
 use std::time::Duration;
@@ -101,7 +101,7 @@ impl Request {
                 info: header,
                 readable: Box::new(stream),
                 content_read_done: false,
-                content: String::from(""),
+                content_vec: vec!(),
             })
         } else if url.scheme() == "http" {
             let mut host_str = String::from(host);
@@ -120,11 +120,31 @@ impl Request {
                 info: header,
                 readable: Box::new(stream),
                 content_read_done: false,
-                content: String::from(""),
+                content_vec: vec!(),
             })
         } else {
             Err(Box::new(RequestError::new("unknown scheme")))
         }
+    }
+
+    pub fn read_up_to(&mut self, max_size: usize) -> BoxResult<()> {
+        let chunck_size = 10000;
+        let mut buffer = vec![0; chunck_size];
+        loop {
+            if self.content_vec.len() >= max_size {
+                break;
+            }
+
+            let bytes = self.readable.read(&mut buffer)?;
+
+            if bytes == 0 {
+                break;
+            } else {
+                self.content_vec.extend(buffer[0..bytes].iter());
+                buffer.clear();
+            }
+        }
+        Ok(())
     }
 
     pub fn read_content(&mut self) -> BoxResult<()> {
@@ -133,53 +153,28 @@ impl Request {
         }
         self.content_read_done = true;
 
+        let content_length = self.content_length().unwrap_or(10000);
+        self.read_up_to(content_length)?;
+        Ok(())
+    }
+
+    pub fn content_length(&self) -> BoxResult<usize> {
         let content_length = self.info
             .headers
             .get("content-length")
             .unwrap_or(&String::from(""))
-            .parse();
-        match content_length {
-            Ok(content_length) => {
-                let mut buffer = vec![0; content_length];
-                self.readable.read_exact(&mut buffer)?;
-                //let out = String::from_utf8(buffer)?;
-                let out = String::from_utf8_lossy(&buffer);
-                self.content = out.to_string();
-                return Ok(());
-            }
-            Err(_) => {
-                let mut result_buffer = vec![];
-                loop {
-                    let mut buffer = vec![0; 10000];
-                    let result = self.readable.read(&mut buffer);
-
-                    match result {
-                        Ok(bytes) => {
-                            if bytes == 0 {
-                                break;
-                            } else {
-                                result_buffer.extend(buffer[0..bytes].iter());
-                            }
-                        }
-                        Err(err) => {
-                            println!("err {}", err);
-                        }
-                    }
-
-                    if result_buffer.len() > 10000 {
-                        break;
-                    }
-                }
-                //let out = String::from_utf8(result_buffer)?;
-                let out = String::from_utf8_lossy(&result_buffer);
-                self.content = out.to_string();
-                return Ok(());
-            }
-        }
+            .parse()?;
+        Ok(content_length)
     }
 
-    pub fn get_content<'a>(&'a self) -> &'a str {
-        &self.content
+    pub fn text<'a>(&'a self) -> String {
+        let out = String::from_utf8_lossy(&self.content_vec);
+        let content = out.to_string();
+        return content.clone();
+    }
+
+    pub fn bytes<'a>(&'a self) -> &'a [u8] {
+        self.content_vec.as_slice()
     }
 
     fn read_stream_until(stream: &mut Read, condition: &'static [u8]) -> BoxResult<String> {

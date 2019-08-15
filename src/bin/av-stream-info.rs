@@ -5,7 +5,11 @@ use colored::*;
 use std::env;
 use av_stream_info_rust::check;
 
+extern crate env_logger;
+
 fn main() {
+    env_logger::init();
+
     let tcp_timeout: u32 = env::var("TCP_TIMEOUT")
         .unwrap_or(String::from("10"))
         .parse()
