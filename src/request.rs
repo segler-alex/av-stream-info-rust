@@ -10,7 +10,7 @@ use std::error::Error;
 use url::Url;
 use std::collections::HashMap;
 
-type BoxResult<T> = Result<T, Box<Error>>;
+type BoxResult<T> = Result<T, Box<dyn Error>>;
 
 #[derive(Debug)]
 struct RequestError {
@@ -46,7 +46,7 @@ pub struct HttpHeaders {
 
 pub struct Request {
     pub info: HttpHeaders,
-    readable: Box<Read>,
+    readable: Box<dyn Read>,
     content_read_done: bool,
     content_vec: Vec<u8>,
 }
@@ -177,7 +177,7 @@ impl Request {
         self.content_vec.as_slice()
     }
 
-    fn read_stream_until(stream: &mut Read, condition: &'static [u8]) -> BoxResult<String> {
+    fn read_stream_until(stream: &mut dyn Read, condition: &'static [u8]) -> BoxResult<String> {
         let mut buffer = vec![0; 1];
         let mut bytes = Vec::new();
         loop {
@@ -208,7 +208,7 @@ impl Request {
         Ok(out.to_string())
     }
 
-    fn send_request(agent: &str, stream: &mut Write, host: &str, path: &str) -> BoxResult<()> {
+    fn send_request(agent: &str, stream: &mut dyn Write, host: &str, path: &str) -> BoxResult<()> {
         let request_str = format!(
             "GET {} HTTP/1.0\r\nHost: {}\r\nAccept: */*\r\nUser-Agent: {}\r\nConnection: close\r\n\r\n",
             path, host, agent
@@ -241,7 +241,7 @@ impl Request {
         }
     }
 
-    fn read_request(stream: &mut Read) -> BoxResult<HttpHeaders> {
+    fn read_request(stream: &mut dyn Read) -> BoxResult<HttpHeaders> {
         let out = Request::read_stream_until(stream, b"\r\n")?;
         let mut httpinfo = Request::decode_first_line(&out)?;
 

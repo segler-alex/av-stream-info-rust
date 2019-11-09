@@ -10,8 +10,8 @@ readme = "README.md"
 
 [dependencies]
 colored = "1.8.0"
-env_logger = "0.6.2"
-hls_m3u8 = "0.2.0"
+env_logger = "0.7.1"
+hls_m3u8 = "0.2.1"
 log = "0.4.8"
 native-tls = "0.2.3"
 playlist-decoder = "0.7.1"
