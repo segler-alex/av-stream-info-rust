@@ -11,6 +11,8 @@ use log::{debug};
 
 #[derive(Debug)]
 pub struct StreamInfo {
+    pub Public: Option<bool>,
+    pub AudioInfo: String,
     pub Name: String,
     pub Description: String,
     pub Type: String,
@@ -22,6 +24,12 @@ pub struct StreamInfo {
     pub CodecAudio: String,
     pub CodecVideo: Option<String>,
     pub Hls: bool,
+
+    pub LogoUrl: String,
+    pub LoadBalancerUrl: String,
+    pub IcyVersion: u32,
+    pub UseMetaData: bool,
+    pub CountryCode: String,
 }
 
 #[derive(Debug)]
@@ -143,6 +151,8 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 video = v;
                             }
                             let stream = StreamInfo {
+                                Public: None,
+                                AudioInfo: String::from(""),
                                 Url: String::from(url),
                                 Type: String::from(""),
                                 Name: String::from(""),
@@ -154,6 +164,11 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 CodecAudio: audio,
                                 CodecVideo: video,
                                 Hls: true,
+                                LogoUrl: String::from(""),
+                                LoadBalancerUrl: String::from(""),
+                                IcyVersion: 1,
+                                UseMetaData: false,
+                                CountryCode: String::from(""),
                             };
                             list.push(Ok(stream));
                             break;
@@ -161,6 +176,8 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                     }
                     Err(_)=>{
                         let stream = StreamInfo {
+                            Public: None,
+                            AudioInfo: String::from(""),
                             Url: String::from(url),
                             Type: String::from(""),
                             Name: String::from(""),
@@ -172,6 +189,11 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                             CodecAudio: String::from("UNKNOWN"),
                             CodecVideo: None,
                             Hls: true,
+                            LogoUrl: String::from(""),
+                            LoadBalancerUrl: String::from(""),
+                            IcyVersion: 1,
+                            UseMetaData: false,
+                            CountryCode: String::from(""),
                         };
                         list.push(Ok(stream));
                     }
@@ -213,7 +235,25 @@ fn handle_stream(mut request: Request, url: &str, mut stream_type: String, deep_
     }
 
     let headers = request.info.headers;
+    let icy_pub: Option<bool> = match headers.get("icy-pub") {
+        Some(content) => {
+            let number = content.parse::<u32>();
+            match number {
+                Ok(number)=>{
+                    Some(number == 1)
+                },
+                Err(_) => {
+                    None
+                }
+            }
+        },
+        None => {
+            None
+        }
+    };
     let stream = StreamInfo {
+        Public: icy_pub,
+        AudioInfo: headers.get("icy-audio-info").unwrap_or(&String::from("")).clone(),
         Url: String::from(url),
         Type: headers
             .get("content-type")
@@ -242,6 +282,28 @@ fn handle_stream(mut request: Request, url: &str, mut stream_type: String, deep_
         CodecAudio: stream_type,
         CodecVideo: None,
         Hls: false,
+        LogoUrl: headers
+            .get("icy-logo")
+            .unwrap_or(&String::from(""))
+            .clone(),
+        LoadBalancerUrl: headers
+            .get("icy-loadbalancer")
+            .unwrap_or(&String::from(""))
+            .clone(),
+        IcyVersion: headers
+            .get("icy-version")
+            .unwrap_or(&String::from(""))
+            .parse()
+            .unwrap_or(1),
+        UseMetaData: headers
+            .get("icy-use-metadata")
+            .unwrap_or(&String::from("0"))
+            .parse()
+            .unwrap_or(0) == 1,
+        CountryCode: headers
+            .get("icy-countrycode")
+            .unwrap_or(&String::from(""))
+            .clone(),
     };
 
     stream

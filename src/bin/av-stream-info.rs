@@ -33,6 +33,7 @@ fn main() {
             for item in list {
                 match item {
                     Ok(item) => {
+                        println!("{:?}", item);
                         let codec_video = item.CodecVideo.unwrap_or(String::from("NONE"));
                         println!("+ {} Audio='{}' Video='{}' Bitrate='{}' (MSG: {})", item.Url, item.CodecAudio, codec_video, item.Bitrate, "OK".green());
                         break;
