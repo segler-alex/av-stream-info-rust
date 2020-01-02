@@ -19,7 +19,7 @@ It only uses the HTTP header fields and the first 50 bytes to analyze the stream
 * **icy-logo** - [String] Url of a logo for this stream, should be in JPG or PNG format. (e.g.: http://example.com/logo.png) (VERSION: 2)
 * **icy-loadbalancer** - [String] Link to load balanced version of this stream. This may be used by stream providers to direct indexers to the main publicly exposed url. Indexers should update their database accordingly.(VERSION: 2)
 * **icy-version** - [Number] The version of this header. 1 is the default. 2 is an extension to the default which is compatible to 1 but adds more headers) (VERSION: 2)
-* **icy-use-metadata** - [Number] Use all of header metadata. This is mainly used to force indexers to update their information. 0 means NO. 1 means YES. (VERSION: 2)
+* **icy-index-metadata** - [Number] Use all of header metadata. This is mainly used to force indexers to update their information. 0 means NO. 1 means YES. (VERSION: 2)
 * **icy-countrycode** - [String] 2 letter countrycode. (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) (VERSION: 2)
 
 ## Additional information

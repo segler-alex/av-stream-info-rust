@@ -23,9 +23,11 @@ fn main() {
         .parse()
         .expect("RETRIES is not u8");
 
+    /*
     println!("TCP_TIMEOUT   : {}", tcp_timeout);
     println!("MAX_DEPTH     : {}", max_depth);
     println!("RETRIES       : {}", retries);
+    */
 
     match env::args().nth(1) {
         Some(url) => {
@@ -33,9 +35,10 @@ fn main() {
             for item in list {
                 match item {
                     Ok(item) => {
-                        println!("{:?}", item);
-                        let codec_video = item.CodecVideo.unwrap_or(String::from("NONE"));
-                        println!("+ {} Audio='{}' Video='{}' Bitrate='{}' (MSG: {})", item.Url, item.CodecAudio, codec_video, item.Bitrate, "OK".green());
+                        let j = serde_json::to_string(&item).expect("Unable to convert output to JSON format.");
+                        println!("{}", j);
+                        //let codec_video = item.CodecVideo.unwrap_or(String::from("NONE"));
+                        //println!("+ {} Audio='{}' Video='{}' Bitrate='{}' (MSG: {})", item.Url, item.CodecAudio, codec_video, item.Bitrate, "OK".green());
                         break;
                     }
                     Err(e) => {

@@ -9,27 +9,27 @@ use streamdeepscan;
 
 use log::{debug};
 
-#[derive(Debug)]
+#[derive(Debug,Serialize)]
 pub struct StreamInfo {
     pub Public: Option<bool>,
-    pub AudioInfo: String,
-    pub Name: String,
-    pub Description: String,
+    pub AudioInfo: Option<String>,
+    pub Name: Option<String>,
+    pub Description: Option<String>,
     pub Type: String,
     pub Url: String,
-    pub Homepage: String,
-    pub Genre: String,
+    pub Homepage: Option<String>,
+    pub Genre: Option<String>,
     pub Bitrate: u32,
     pub Sampling: u32,
     pub CodecAudio: String,
     pub CodecVideo: Option<String>,
     pub Hls: bool,
 
-    pub LogoUrl: String,
-    pub LoadBalancerUrl: String,
+    pub LogoUrl: Option<String>,
+    pub LoadBalancerUrl: Option<String>,
     pub IcyVersion: u32,
-    pub UseMetaData: bool,
-    pub CountryCode: String,
+    pub OverrideIndexMetaData: bool,
+    pub CountryCode: Option<String>,
 }
 
 #[derive(Debug)]
@@ -152,23 +152,23 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                             }
                             let stream = StreamInfo {
                                 Public: None,
-                                AudioInfo: String::from(""),
+                                AudioInfo: None,
                                 Url: String::from(url),
                                 Type: String::from(""),
-                                Name: String::from(""),
-                                Description: String::from(""),
-                                Homepage: String::from(""),
+                                Name: None,
+                                Description: None,
+                                Homepage: None,
                                 Bitrate: (i.bandwidth() as u32) / 1000,
-                                Genre: String::from(""),
+                                Genre: None,
                                 Sampling: 0,
                                 CodecAudio: audio,
                                 CodecVideo: video,
                                 Hls: true,
-                                LogoUrl: String::from(""),
-                                LoadBalancerUrl: String::from(""),
+                                LogoUrl: None,
+                                LoadBalancerUrl: None,
                                 IcyVersion: 1,
-                                UseMetaData: false,
-                                CountryCode: String::from(""),
+                                OverrideIndexMetaData: false,
+                                CountryCode: None,
                             };
                             list.push(Ok(stream));
                             break;
@@ -177,23 +177,23 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                     Err(_)=>{
                         let stream = StreamInfo {
                             Public: None,
-                            AudioInfo: String::from(""),
+                            AudioInfo: None,
                             Url: String::from(url),
                             Type: String::from(""),
-                            Name: String::from(""),
-                            Description: String::from(""),
-                            Homepage: String::from(""),
+                            Name: None,
+                            Description: None,
+                            Homepage: None,
                             Bitrate: 0,
-                            Genre: String::from(""),
+                            Genre: None,
                             Sampling: 0,
                             CodecAudio: String::from("UNKNOWN"),
                             CodecVideo: None,
                             Hls: true,
-                            LogoUrl: String::from(""),
-                            LoadBalancerUrl: String::from(""),
+                            LogoUrl: None,
+                            LoadBalancerUrl: None,
                             IcyVersion: 1,
-                            UseMetaData: false,
-                            CountryCode: String::from(""),
+                            OverrideIndexMetaData: false,
+                            CountryCode: None,
                         };
                         list.push(Ok(stream));
                     }
@@ -214,7 +214,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
     list
 }
 
-fn handle_stream(mut request: Request, url: &str, mut stream_type: String, deep_scan: bool) -> StreamInfo {
+fn handle_stream(mut request: Request, Type: String, url: &str, mut stream_type: String, deep_scan: bool) -> StreamInfo {
     debug!("handle_stream(url={})", url);
 
     if deep_scan {
@@ -234,7 +234,7 @@ fn handle_stream(mut request: Request, url: &str, mut stream_type: String, deep_
         }
     }
 
-    let headers = request.info.headers;
+    let mut headers = request.info.headers;
     let icy_pub: Option<bool> = match headers.get("icy-pub") {
         Some(content) => {
             let number = content.parse::<u32>();
@@ -253,27 +253,18 @@ fn handle_stream(mut request: Request, url: &str, mut stream_type: String, deep_
     };
     let stream = StreamInfo {
         Public: icy_pub,
-        AudioInfo: headers.get("icy-audio-info").unwrap_or(&String::from("")).clone(),
+        AudioInfo: headers.remove("icy-audio-info"),
         Url: String::from(url),
-        Type: headers
-            .get("content-type")
-            .unwrap_or(&String::from(""))
-            .clone(),
-        Name: headers.get("icy-name").unwrap_or(&String::from("")).clone(),
-        Description: headers
-            .get("icy-description")
-            .unwrap_or(&String::from(""))
-            .clone(),
-        Homepage: headers.get("icy-url").unwrap_or(&String::from("")).clone(),
+        Type,
+        Name: headers.remove("icy-name"),
+        Description: headers.remove("icy-description"),
+        Homepage: headers.remove("icy-url"),
         Bitrate: headers
             .get("icy-br")
             .unwrap_or(&String::from(""))
             .parse()
             .unwrap_or(0),
-        Genre: headers
-            .get("icy-genre")
-            .unwrap_or(&String::from(""))
-            .clone(),
+        Genre: headers.remove("icy-genre"),
         Sampling: headers
             .get("icy-sr")
             .unwrap_or(&String::from(""))
@@ -282,28 +273,19 @@ fn handle_stream(mut request: Request, url: &str, mut stream_type: String, deep_
         CodecAudio: stream_type,
         CodecVideo: None,
         Hls: false,
-        LogoUrl: headers
-            .get("icy-logo")
-            .unwrap_or(&String::from(""))
-            .clone(),
-        LoadBalancerUrl: headers
-            .get("icy-loadbalancer")
-            .unwrap_or(&String::from(""))
-            .clone(),
+        LogoUrl: headers.remove("icy-logo"),
+        LoadBalancerUrl: headers.remove("icy-loadbalancer"),
         IcyVersion: headers
             .get("icy-version")
             .unwrap_or(&String::from(""))
             .parse()
             .unwrap_or(1),
-        UseMetaData: headers
-            .get("icy-use-metadata")
+        OverrideIndexMetaData: headers
+            .get("icy-index-metadata")
             .unwrap_or(&String::from("0"))
             .parse()
             .unwrap_or(0) == 1,
-        CountryCode: headers
-            .get("icy-countrycode")
-            .unwrap_or(&String::from(""))
-            .clone(),
+        CountryCode: headers.remove("icy-countrycode"),
     };
 
     stream
@@ -317,16 +299,16 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
     let request = Request::new(&url, "StreamCheckBot/0.1.0", timeout);
     let mut list: Vec<StreamCheckResult> = vec![];
     match request {
-        Ok(request) => {
+        Ok(mut request) => {
             if request.info.code >= 200 && request.info.code < 300 {
-                let content_type = request.info.headers.get("content-type");
+                let content_type = request.info.headers.remove("content-type");
                 let content_length = request.content_length().ok();
                 match content_type {
                     Some(content_type) => {
-                        let link_type = get_type(content_type, content_length);
+                        let link_type = get_type(&content_type, content_length);
                         match link_type {
                             LinkType::Playlist => list.extend(handle_playlist(request, url, check_all, timeout, max_depth)),
-                            LinkType::Stream(stream_type) => list.push(Ok(handle_stream(request, url, stream_type, true))),
+                            LinkType::Stream(stream_type) => list.push(Ok(handle_stream(request, content_type, url, stream_type, true))),
                             _ => list.push(Err(StreamCheckError::new(url,&format!("unknown content type {}", content_type),)))
                         };
                     }

@@ -8,6 +8,11 @@ extern crate url;
 extern crate hls_m3u8;
 extern crate log;
 
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
+
 extern crate tree_magic;
 
 mod request;
