@@ -22,6 +22,8 @@ mod streamdeepscan;
 use std::time::Duration;
 use std::thread;
 
+pub use streamcheck::{StreamInfo, StreamCheckResult, StreamCheckError};
+
 /// Check url for audio/video stream.
 /// # Example
 /// ```rust
