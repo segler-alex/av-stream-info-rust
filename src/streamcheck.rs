@@ -9,7 +9,7 @@ use streamdeepscan;
 
 use log::{debug};
 
-#[derive(Debug,Serialize)]
+#[derive(Debug,Serialize,Clone)]
 pub struct StreamInfo {
     pub Public: Option<bool>,
     pub AudioInfo: Option<String>,
@@ -32,7 +32,7 @@ pub struct StreamInfo {
     pub CountryCode: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct StreamCheckError {
     pub Url: String,
     pub Msg: String,
