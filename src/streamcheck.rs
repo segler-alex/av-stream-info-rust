@@ -1,11 +1,11 @@
 #![allow(non_snake_case)]
-use request::Request;
+use crate::request::Request;
 
 use std::fmt;
 use playlist_decoder;
 use url::Url;
 use hls_m3u8::MasterPlaylist;
-use streamdeepscan;
+use crate::streamdeepscan;
 
 use log::{debug};
 
@@ -345,38 +345,48 @@ fn decode_playlist(url_str: &str, content: &str, check_all: bool, timeout: u32, 
     match base_url {
         Ok(base_url) => {
             let urls = playlist_decoder::decode(content);
-            let mut max_urls = 10;
-            for url in urls {
-                max_urls = max_urls - 1;
-                if max_urls == 0{
-                    break;
-                }
-                if url.trim() != "" {
-                    let abs_url = base_url.join(&url);
-                    match abs_url {
-                        Ok(abs_url) => {
-                            let result = check(&abs_url.as_str(),check_all, timeout, max_depth);
-                            if !check_all{
-                                let mut found = false;
-                                for result_single in result.iter() {
-                                    if result_single.is_ok() {
-                                        found = true;
+            match urls {
+                Ok(urls) => {
+                    let mut max_urls = 10;
+                    for url in urls {
+                        max_urls = max_urls - 1;
+                        if max_urls == 0{
+                            break;
+                        }
+                        if url.trim() != "" {
+                            let abs_url = base_url.join(&url);
+                            match abs_url {
+                                Ok(abs_url) => {
+                                    let result = check(&abs_url.as_str(),check_all, timeout, max_depth);
+                                    if !check_all{
+                                        let mut found = false;
+                                        for result_single in result.iter() {
+                                            if result_single.is_ok() {
+                                                found = true;
+                                            }
+                                        }
+                                        if found{
+                                            list.extend(result);
+                                            break;
+                                        }
                                     }
-                                }
-                                if found{
                                     list.extend(result);
-                                    break;
+                                }
+                                Err(err) => {
+                                    list.push(Err(StreamCheckError::new(
+                                        url_str,
+                                        &err.to_string(),
+                                    )));
                                 }
                             }
-                            list.extend(result);
-                        }
-                        Err(err) => {
-                            list.push(Err(StreamCheckError::new(
-                                url_str,
-                                &err.to_string(),
-                            )));
                         }
                     }
+                },
+                Err(err) => {
+                    list.push(Err(StreamCheckError::new(
+                        url_str,
+                        &err.to_string(),
+                    )));
                 }
             }
         }
