@@ -24,4 +24,4 @@ It only uses the HTTP header fields and the first 50 bytes to analyze the stream
 
 ## Additional information
 
-* https://cast.readme.io/docs/icy
+* https://www.stream-meta.info
