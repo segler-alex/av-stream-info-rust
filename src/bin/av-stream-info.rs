@@ -5,6 +5,8 @@ use colored::*;
 use std::env;
 use av_stream_info_rust::check;
 
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 
 fn main() {
@@ -42,13 +44,13 @@ fn main() {
                         break;
                     }
                     Err(e) => {
-                        println!("- {} (MSG: {})", e.Url, e.Msg.red());
+                        error!("- {} (MSG: {})", e.Url, e.Msg.red());
                     }
                 }
             }
         }
         None => {
-            println!("1 parameter needed");
+            error!("1 parameter needed");
         }
     };
 }

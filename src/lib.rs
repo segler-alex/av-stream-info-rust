@@ -2,11 +2,13 @@
 //! If so, then it will extract information about the stream from its metadata or in case of HLS streams
 //! from its master playlist file.
 
+extern crate hls_m3u8;
+#[macro_use]
+extern crate log;
 extern crate native_tls;
 extern crate playlist_decoder;
 extern crate url;
-extern crate hls_m3u8;
-extern crate log;
+extern crate reqwest;
 
 extern crate serde;
 #[macro_use]
@@ -19,10 +21,12 @@ mod request;
 mod streamcheck;
 mod streamdeepscan;
 
-use std::time::Duration;
-use std::thread;
+mod http_config;
 
-pub use streamcheck::{StreamInfo, StreamCheckResult, StreamCheckError};
+use std::thread;
+use std::time::Duration;
+
+pub use streamcheck::{StreamCheckError, StreamCheckResult, StreamInfo};
 
 /// Check url for audio/video stream.
 /// # Example
@@ -46,11 +50,16 @@ pub fn check(
     let mut working = false;
     let mut list: Vec<streamcheck::StreamCheckResult> = Vec::new();
 
+    let mut homepage: Option<String> = None;
+
+    // check streams
     for _i in 0..retries {
         list = streamcheck::check(url, false, timeout, max_depth);
         for item in list.iter() {
             match item {
-                &Ok(_) => {
+                Ok(stream) => {
+                    // find homepage link
+                    homepage = stream.Homepage.clone();
                     working = true;
                     break;
                 }
@@ -63,6 +72,19 @@ pub fn check(
         }
 
         thread::sleep(Duration::from_secs(1));
+    }
+
+    if let Some(homepage) = homepage {
+        //let result = http_config::extract_from_homepage(&homepage);
+        let result = http_config::extract_from_homepage("http://www.radio-browser.info");
+        match result {
+            Ok(metainfo) => {
+                debug!("Got metainfo from file: {:?}", metainfo);
+            },
+            Err(err) => {
+                error!("#3b {}",err);
+            }
+        }
     }
     list
 }
