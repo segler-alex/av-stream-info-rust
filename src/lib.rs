@@ -7,8 +7,8 @@ extern crate hls_m3u8;
 extern crate log;
 extern crate native_tls;
 extern crate playlist_decoder;
-extern crate url;
 extern crate reqwest;
+extern crate url;
 
 extern crate serde;
 #[macro_use]
@@ -20,13 +20,15 @@ extern crate tree_magic;
 mod request;
 mod streamcheck;
 mod streamdeepscan;
+mod streamcheckerror;
 
 mod http_config;
 
 use std::thread;
 use std::time::Duration;
 
-pub use streamcheck::{StreamCheckError, StreamCheckResult, StreamInfo};
+pub use streamcheckerror::StreamCheckError;
+pub use streamcheck::{StreamCheckResult, StreamInfo};
 
 /// Check url for audio/video stream.
 /// # Example
@@ -74,15 +76,15 @@ pub fn check(
         thread::sleep(Duration::from_secs(1));
     }
 
-    if let Some(homepage) = homepage {
+    if let Some(_homepage) = homepage {
         //let result = http_config::extract_from_homepage(&homepage);
         let result = http_config::extract_from_homepage("http://www.radio-browser.info");
         match result {
             Ok(metainfo) => {
                 debug!("Got metainfo from file: {:?}", metainfo);
-            },
+            }
             Err(err) => {
-                error!("#3b {}",err);
+                error!("Extract from website failed: {}", err);
             }
         }
     }

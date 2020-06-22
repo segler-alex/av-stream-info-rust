@@ -1,7 +1,8 @@
 #![allow(non_snake_case)]
 use crate::request::Request;
 
-use std::fmt;
+use crate::streamcheckerror::StreamCheckError;
+
 use playlist_decoder;
 use url::Url;
 use hls_m3u8::MasterPlaylist;
@@ -26,40 +27,15 @@ pub struct StreamInfo {
     pub Hls: bool,
 
     pub LogoUrl: Option<String>,
-    pub LoadBalancerUrl: Option<String>,
+    pub MainStreamUrl: Option<String>,
     pub IcyVersion: u32,
-    pub OverrideIndexMetaData: bool,
+    pub OverrideIndexMetaData: Option<bool>,
     pub CountryCode: Option<String>,
+    pub CountrySubdivisonCode: Option<String>,
+    pub LanguageCodes: Vec<String>,
+    pub DoNotIndex: Option<bool>,
 }
 
-#[derive(Debug,Clone)]
-pub struct StreamCheckError {
-    pub Url: String,
-    pub Msg: String,
-}
-
-impl StreamCheckError {
-    fn new(url: &str, msg: &str) -> StreamCheckError {
-        StreamCheckError {
-            Url: url.to_string(),
-            Msg: msg.to_string(),
-        }
-    }
-}
-
-impl fmt::Display for StreamCheckError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.Msg)
-    }
-}
-
-impl Error for StreamCheckError {
-    fn description(&self) -> &str {
-        &self.Msg
-    }
-}
-
-use std::error::Error;
 pub type StreamCheckResult = Result<StreamInfo, StreamCheckError>;
 
 fn type_is_m3u(content_type: &str) -> bool {
@@ -165,10 +141,13 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 CodecVideo: video,
                                 Hls: true,
                                 LogoUrl: None,
-                                LoadBalancerUrl: None,
+                                MainStreamUrl: None,
                                 IcyVersion: 1,
-                                OverrideIndexMetaData: false,
+                                OverrideIndexMetaData: None,
                                 CountryCode: None,
+                                CountrySubdivisonCode: None,
+                                LanguageCodes: vec![],
+                                DoNotIndex: None,
                             };
                             list.push(Ok(stream));
                             break;
@@ -190,10 +169,13 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                             CodecVideo: None,
                             Hls: true,
                             LogoUrl: None,
-                            LoadBalancerUrl: None,
+                            MainStreamUrl: None,
                             IcyVersion: 1,
-                            OverrideIndexMetaData: false,
+                            OverrideIndexMetaData: None,
                             CountryCode: None,
+                            CountrySubdivisonCode: None,
+                            LanguageCodes: vec![],
+                            DoNotIndex: None,
                         };
                         list.push(Ok(stream));
                     }
@@ -251,6 +233,7 @@ fn handle_stream(mut request: Request, Type: String, url: &str, mut stream_type:
             None
         }
     };
+
     let stream = StreamInfo {
         Public: icy_pub,
         AudioInfo: headers.remove("icy-audio-info"),
@@ -274,18 +257,21 @@ fn handle_stream(mut request: Request, Type: String, url: &str, mut stream_type:
         CodecVideo: None,
         Hls: false,
         LogoUrl: headers.remove("icy-logo"),
-        LoadBalancerUrl: headers.remove("icy-loadbalancer"),
+        MainStreamUrl: headers.remove("icy-main-stream-url"),
         IcyVersion: headers
-            .get("icy-version")
-            .unwrap_or(&String::from(""))
+            .remove("icy-version")
+            .unwrap_or(String::from(""))
             .parse()
             .unwrap_or(1),
         OverrideIndexMetaData: headers
-            .get("icy-index-metadata")
-            .unwrap_or(&String::from("0"))
-            .parse()
-            .unwrap_or(0) == 1,
-        CountryCode: headers.remove("icy-countrycode"),
+            .remove("icy-index-metadata")
+            .map(|s| s.parse().unwrap_or(0) == 1),
+        CountryCode: headers.remove("icy-country-code"),
+        CountrySubdivisonCode: headers.remove("icy-country-subdivision-code"),
+        LanguageCodes: vec![],
+        DoNotIndex: headers
+            .remove("icy-do-not-index")
+            .map(|s| s.parse().unwrap_or(0) == 1),
     };
 
     stream
