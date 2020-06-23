@@ -2,13 +2,13 @@ use native_tls::TlsConnector;
 
 use std::fmt;
 
-use std::net::TcpStream;
-use std::net::SocketAddr;
 use std::io::{Read, Write};
+use std::net::SocketAddr;
+use std::net::TcpStream;
 
+use std::collections::HashMap;
 use std::error::Error;
 use url::Url;
-use std::collections::HashMap;
 
 type BoxResult<T> = Result<T, Box<dyn Error>>;
 
@@ -51,16 +51,13 @@ pub struct Request {
     content_vec: Vec<u8>,
 }
 
-use std::time::Duration;
 use std::net::ToSocketAddrs;
+use std::time::Duration;
 use std::vec::IntoIter;
 
 fn connect(addrs: Box<IntoIter<SocketAddr>>, timeout: u32) -> BoxResult<TcpStream> {
     for addr in addrs {
-        let stream = TcpStream::connect_timeout(
-            &addr,
-            Duration::from_secs(timeout as u64),
-        );
+        let stream = TcpStream::connect_timeout(&addr, Duration::from_secs(timeout as u64));
         if let Ok(stream) = stream {
             return Ok(stream);
         }
@@ -72,28 +69,30 @@ impl Request {
     pub fn new(url_str: &str, agent: &str, timeout: u32) -> BoxResult<Request> {
         let url = Url::parse(url_str)?;
 
-        let host = url.host_str()
+        let host = url
+            .host_str()
             .ok_or(RequestError::new("illegal host name"))?;
-        let port = url.port_or_known_default()
+        let port = url
+            .port_or_known_default()
             .ok_or(RequestError::new("port unknown"))?;
 
         let connect_str = format!("{}:{}", host, port);
         let addrs_iter = connect_str.to_socket_addrs()?;
-        let mut stream: TcpStream = connect(Box::new(addrs_iter),timeout)?;
+        let mut stream: TcpStream = connect(Box::new(addrs_iter), timeout)?;
         stream.set_read_timeout(Some(Duration::from_secs(timeout as u64)))?;
 
         if url.scheme() == "https" {
             let connector = TlsConnector::builder().build()?;
             let mut stream = connector.connect(host, stream)?;
             let mut host_str = String::from(host);
-            if port != 443{
-                host_str = format!("{}:{}",host,port);
+            if port != 443 {
+                host_str = format!("{}:{}", host, port);
             }
             let query = url.query();
             if let Some(query) = query {
-                let full_path = format!("{}?{}",url.path(),query);
+                let full_path = format!("{}?{}", url.path(), query);
                 Request::send_request(agent, &mut stream, &host_str, &full_path)?;
-            }else{
+            } else {
                 Request::send_request(agent, &mut stream, &host_str, url.path())?;
             }
             let header = Request::read_request(&mut stream)?;
@@ -101,18 +100,18 @@ impl Request {
                 info: header,
                 readable: Box::new(stream),
                 content_read_done: false,
-                content_vec: vec!(),
+                content_vec: vec![],
             })
         } else if url.scheme() == "http" {
             let mut host_str = String::from(host);
-            if port != 80{
-                host_str = format!("{}:{}",host,port);
+            if port != 80 {
+                host_str = format!("{}:{}", host, port);
             }
             let query = url.query();
             if let Some(query) = query {
-                let full_path = format!("{}?{}",url.path(),query);
+                let full_path = format!("{}?{}", url.path(), query);
                 Request::send_request(agent, &mut stream, &host_str, &full_path)?;
-            }else{
+            } else {
                 Request::send_request(agent, &mut stream, &host_str, url.path())?;
             }
             let header = Request::read_request(&mut stream)?;
@@ -120,7 +119,7 @@ impl Request {
                 info: header,
                 readable: Box::new(stream),
                 content_read_done: false,
-                content_vec: vec!(),
+                content_vec: vec![],
             })
         } else {
             Err(Box::new(RequestError::new("unknown scheme")))
@@ -159,7 +158,8 @@ impl Request {
     }
 
     pub fn content_length(&self) -> BoxResult<usize> {
-        let content_length = self.info
+        let content_length = self
+            .info
             .headers
             .get("content-length")
             .unwrap_or(&String::from(""))
@@ -254,8 +254,13 @@ impl Request {
                     let (key, value) = line.split_at(index);
                     let key_trimmed = String::from(key).to_lowercase();
                     let value_trimmed = String::from(value[1..].trim());
-                    httpinfo.headers.entry(key_trimmed)
-                        .and_modify(|s| {s.push_str(","); s.push_str(&value_trimmed);})
+                    httpinfo
+                        .headers
+                        .entry(key_trimmed)
+                        .and_modify(|s| {
+                            s.push_str(",");
+                            s.push_str(&value_trimmed);
+                        })
                         .or_insert(value_trimmed);
                 }
                 _ => {}
