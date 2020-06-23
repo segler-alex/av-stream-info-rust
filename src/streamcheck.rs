@@ -20,8 +20,8 @@ pub struct StreamInfo {
     pub Url: String,
     pub Homepage: Option<String>,
     pub Genre: Option<String>,
-    pub Bitrate: u32,
-    pub Sampling: u32,
+    pub Bitrate: Option<u32>,
+    pub Sampling: Option<u32>,
     pub CodecAudio: String,
     pub CodecVideo: Option<String>,
     pub Hls: bool,
@@ -117,7 +117,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                 let playlist = content.parse::<MasterPlaylist>();
                 match playlist{
                     Ok(playlist)=>{
-                        for i in playlist.stream_inf_tags() {
+                        for i in playlist.variant_streams {
                             let mut audio = String::from("UNKNOWN");
                             let mut video: Option<String> = None;
                             let codecs_obj = i.codecs();
@@ -134,9 +134,9 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 Name: None,
                                 Description: None,
                                 Homepage: None,
-                                Bitrate: (i.bandwidth() as u32) / 1000,
+                                Bitrate: Some((i.bandwidth() as u32) / 1000),
                                 Genre: None,
-                                Sampling: 0,
+                                Sampling: None,
                                 CodecAudio: audio,
                                 CodecVideo: video,
                                 Hls: true,
@@ -162,9 +162,9 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                             Name: None,
                             Description: None,
                             Homepage: None,
-                            Bitrate: 0,
+                            Bitrate: None,
                             Genre: None,
-                            Sampling: 0,
+                            Sampling: None,
                             CodecAudio: String::from("UNKNOWN"),
                             CodecVideo: None,
                             Hls: true,
@@ -234,6 +234,17 @@ fn handle_stream(mut request: Request, Type: String, url: &str, mut stream_type:
         }
     };
 
+    let LanguageCodesString: Option<String> = headers.remove("icy-language-codes");
+    let mut LanguageCodes: Vec<String> = vec![];
+    if let Some(LanguageCodesSome) = LanguageCodesString {
+        for split_str in LanguageCodesSome.split(",") {
+            let split_str_trimmed = split_str.trim();
+            if split_str_trimmed != "" {
+                LanguageCodes.push(split_str_trimmed.to_string());
+            }
+        }
+    }
+
     let stream = StreamInfo {
         Public: icy_pub,
         AudioInfo: headers.remove("icy-audio-info"),
@@ -243,16 +254,12 @@ fn handle_stream(mut request: Request, Type: String, url: &str, mut stream_type:
         Description: headers.remove("icy-description"),
         Homepage: headers.remove("icy-url"),
         Bitrate: headers
-            .get("icy-br")
-            .unwrap_or(&String::from(""))
-            .parse()
-            .unwrap_or(0),
+            .remove("icy-br")
+            .map(|s| s.parse().unwrap_or(0)),
         Genre: headers.remove("icy-genre"),
         Sampling: headers
-            .get("icy-sr")
-            .unwrap_or(&String::from(""))
-            .parse()
-            .unwrap_or(0),
+            .remove("icy-sr")
+            .map(|s| s.parse().unwrap_or(0)),
         CodecAudio: stream_type,
         CodecVideo: None,
         Hls: false,
@@ -268,7 +275,7 @@ fn handle_stream(mut request: Request, Type: String, url: &str, mut stream_type:
             .map(|s| s.parse().unwrap_or(0) == 1),
         CountryCode: headers.remove("icy-country-code"),
         CountrySubdivisonCode: headers.remove("icy-country-subdivision-code"),
-        LanguageCodes: vec![],
+        LanguageCodes,
         DoNotIndex: headers
             .remove("icy-do-not-index")
             .map(|s| s.parse().unwrap_or(0) == 1),
