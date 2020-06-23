@@ -252,10 +252,11 @@ impl Request {
             match line.find(':') {
                 Some(index) => {
                     let (key, value) = line.split_at(index);
-                    httpinfo.headers.insert(
-                        String::from(key).to_lowercase(),
-                        String::from(value[1..].trim()),
-                    );
+                    let key_trimmed = String::from(key).to_lowercase();
+                    let value_trimmed = String::from(value[1..].trim());
+                    httpinfo.headers.entry(key_trimmed)
+                        .and_modify(|s| {s.push_str(","); s.push_str(&value_trimmed);})
+                        .or_insert(value_trimmed);
                 }
                 _ => {}
             }
