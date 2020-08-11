@@ -12,7 +12,9 @@ use log::{debug};
 
 #[derive(Debug,Serialize,Clone)]
 pub struct StreamInfo {
+    pub Server: Option<String>,
     pub Public: Option<bool>,
+    pub IceAudioInfo: Option<String>,
     pub AudioInfo: Option<String>,
     pub Name: Option<String>,
     pub Description: Option<String>,
@@ -127,7 +129,9 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 video = v;
                             }
                             let stream = StreamInfo {
+                                Server: None,
                                 Public: None,
+                                IceAudioInfo: None,
                                 AudioInfo: None,
                                 Url: String::from(url),
                                 Type: String::from(""),
@@ -155,7 +159,9 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                     }
                     Err(_)=>{
                         let stream = StreamInfo {
+                            Server: None,
                             Public: None,
+                            IceAudioInfo: None,
                             AudioInfo: None,
                             Url: String::from(url),
                             Type: String::from(""),
@@ -245,9 +251,13 @@ fn handle_stream(mut request: Request, Type: String, url: &str, mut stream_type:
         }
     }
 
+    trace!("headers: {:?}", headers);
+
     let stream = StreamInfo {
+        Server: headers.remove("server"),
         Public: icy_pub,
         AudioInfo: headers.remove("icy-audio-info"),
+        IceAudioInfo: headers.remove("ice-audio-info"),
         Url: String::from(url),
         Type,
         Name: headers.remove("icy-name"),

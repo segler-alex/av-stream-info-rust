@@ -76,9 +76,9 @@ pub fn check(
         thread::sleep(Duration::from_secs(1));
     }
 
-    if let Some(_homepage) = homepage {
-        //let result = http_config::extract_from_homepage(&homepage);
-        let result = http_config::extract_from_homepage("http://www.radio-browser.info");
+    if let Some(homepage) = homepage {
+        let result = http_config::extract_from_homepage(&homepage);
+        //let result = http_config::extract_from_homepage("http://www.radio-browser.info");
         match result {
             Ok(metainfo) => {
                 debug!("Got metainfo from file: {:?}", metainfo);
