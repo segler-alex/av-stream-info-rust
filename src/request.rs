@@ -173,9 +173,9 @@ impl Request {
         return content.clone();
     }
 
-    pub fn bytes<'a>(&'a self) -> &'a [u8] {
-        self.content_vec.as_slice()
-    }
+    //pub fn bytes<'a>(&'a self) -> &'a [u8] {
+    //    self.content_vec.as_slice()
+    //}
 
     fn read_stream_until(stream: &mut dyn Read, condition: &'static [u8]) -> BoxResult<String> {
         let mut buffer = vec![0; 1];

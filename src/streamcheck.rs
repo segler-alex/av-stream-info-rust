@@ -7,7 +7,7 @@ use playlist_decoder;
 use url::Url;
 use hls_m3u8::MasterPlaylist;
 use core::convert::TryFrom;
-use crate::streamdeepscan;
+//use crate::streamdeepscan;
 
 use log::{debug};
 
@@ -203,25 +203,25 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
     list
 }
 
-fn handle_stream(mut request: Request, Type: String, url: &str, mut stream_type: String, deep_scan: bool) -> StreamInfo {
+fn handle_stream(request: Request, Type: String, url: &str, stream_type: String /* , deep_scan: bool */) -> StreamInfo {
     debug!("handle_stream(url={})", url);
 
-    if deep_scan {
-        let result = request.read_up_to(50);
-        if result.is_ok(){
-            let bytes = request.bytes();
-            let scan_result = streamdeepscan::scan(bytes);
-            if let Ok(scan_result) = scan_result {
-                if let Some(scan_result) = scan_result {
-                    let x = type_is_stream(&scan_result.mime);
-                    if let Some(x) = x {
-                        stream_type = String::from(x);
-                        debug!("url={}, override stream_type of with deep scan: {}", url, stream_type);
-                    }
-                }
-            }
-        }
-    }
+    //if deep_scan {
+    //    let result = request.read_up_to(50);
+    //    if result.is_ok(){
+    //        let bytes = request.bytes();
+    //        let scan_result = streamdeepscan::scan(bytes);
+    //        if let Ok(scan_result) = scan_result {
+    //            if let Some(scan_result) = scan_result {
+    //                let x = type_is_stream(&scan_result.mime);
+    //                if let Some(x) = x {
+    //                    stream_type = String::from(x);
+    //                    debug!("url={}, override stream_type of with deep scan: {}", url, stream_type);
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
 
     let mut headers = request.info.headers;
     let icy_pub: Option<bool> = match headers.get("icy-pub") {
@@ -312,7 +312,7 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                         let link_type = get_type(&content_type, content_length);
                         match link_type {
                             LinkType::Playlist => list.extend(handle_playlist(request, url, check_all, timeout, max_depth)),
-                            LinkType::Stream(stream_type) => list.push(Ok(handle_stream(request, content_type, url, stream_type, true))),
+                            LinkType::Stream(stream_type) => list.push(Ok(handle_stream(request, content_type, url, stream_type))),
                             _ => list.push(Err(StreamCheckError::new(url,&format!("unknown content type {}", content_type),)))
                         };
                     }
