@@ -6,6 +6,7 @@ use crate::streamcheckerror::StreamCheckError;
 use playlist_decoder;
 use url::Url;
 use hls_m3u8::MasterPlaylist;
+use core::convert::TryFrom;
 use crate::streamdeepscan;
 
 use log::{debug};
@@ -116,7 +117,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
             let content = request.text();
             let is_hls = playlist_decoder::is_content_hls(&content);
             if is_hls {
-                let playlist = content.parse::<MasterPlaylist>();
+                let playlist = MasterPlaylist::try_from(&content[..]);
                 match playlist{
                     Ok(playlist)=>{
                         for i in playlist.variant_streams {

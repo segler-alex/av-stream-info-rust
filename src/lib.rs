@@ -29,6 +29,7 @@ use std::time::Duration;
 
 pub use streamcheckerror::StreamCheckError;
 pub use streamcheck::{StreamCheckResult, StreamInfo};
+pub use http_config::extract_from_homepage;
 
 /// Check url for audio/video stream.
 /// # Example
@@ -52,16 +53,13 @@ pub fn check(
     let mut working = false;
     let mut list: Vec<streamcheck::StreamCheckResult> = Vec::new();
 
-    let mut homepage: Option<String> = None;
-
     // check streams
     for _i in 0..retries {
         list = streamcheck::check(url, false, timeout, max_depth);
         for item in list.iter() {
             match item {
-                Ok(stream) => {
+                Ok(_) => {
                     // find homepage link
-                    homepage = stream.Homepage.clone();
                     working = true;
                     break;
                 }
@@ -76,17 +74,5 @@ pub fn check(
         thread::sleep(Duration::from_secs(1));
     }
 
-    if let Some(homepage) = homepage {
-        let result = http_config::extract_from_homepage(&homepage);
-        //let result = http_config::extract_from_homepage("http://www.radio-browser.info");
-        match result {
-            Ok(metainfo) => {
-                debug!("Got metainfo from file: {:?}", metainfo);
-            }
-            Err(err) => {
-                error!("Extract from website failed: {}", err);
-            }
-        }
-    }
     list
 }

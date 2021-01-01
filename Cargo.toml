@@ -11,14 +11,14 @@ edition = "2018"
 
 [dependencies]
 colored = "2.0.0"
-env_logger = "0.7.1"
-hls_m3u8 = "0.3.0"
+env_logger = "0.8.2"
+hls_m3u8 = "0.4.0"
 log = "0.4.11"
-native-tls = "0.2.4"
-playlist-decoder = "0.8.0"
-reqwest = { version = "0.10.7", features = ["blocking"] }
-serde = "1.0.115"
-serde_derive = "1.0.115"
-serde_json = "1.0.57"
+native-tls = "0.2.7"
+playlist-decoder = "0.8.1"
+reqwest = { version = "0.10.10", features = ["blocking"] }
+serde = "1.0.118"
+serde_derive = "1.0.118"
+serde_json = "1.0.61"
 tree_magic = "0.2.3"
-url = "2.1.1"
+url = "2.2.0"

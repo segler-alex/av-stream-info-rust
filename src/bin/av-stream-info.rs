@@ -1,10 +1,8 @@
 extern crate colored;
-extern crate av_stream_info_rust;
 
 use colored::*;
 use std::env;
 use av_stream_info_rust::check;
-
 extern crate log;
 extern crate env_logger;
 
