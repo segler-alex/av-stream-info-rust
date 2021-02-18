@@ -266,10 +266,12 @@ fn handle_stream(request: Request, Type: String, url: &str, stream_type: String 
         Homepage: headers.remove("icy-url"),
         Bitrate: headers
             .remove("icy-br")
-            .map(|s| s.parse().unwrap_or(0)),
+            .map(|s| s.split(",").nth(0).unwrap_or("").parse().unwrap_or(0)),
         Genre: headers.remove("icy-genre"),
         Sampling: headers
             .remove("icy-sr")
+            // some use different header
+            .or(headers.remove("icy-samplerate"))
             .map(|s| s.parse().unwrap_or(0)),
         CodecAudio: stream_type,
         CodecVideo: None,

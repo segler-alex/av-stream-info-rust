@@ -16,6 +16,7 @@ It only uses the HTTP header fields and the first 50 bytes to analyze the stream
 * **icy-br** - [Number] Bitrate as a number. (e.g.: 128) (VERSION: 1)
 * **icy-genre** - [String] Multiple tags split up by comma that describe the station. (e.g.: jazz,classical) (VERSION: 1)
 * **icy-sr** - [Number] Sampling rate of the stream in Hz. (e.g.: 44100) (VERSION: 1)
+* **icy-samplerate** - [Number] Fallback for icy-sr, some services do use this header, non standard (e.g.: 44100)
 * **icy-logo** - [String] Url of a logo for this stream, should be in JPG or PNG format. (e.g.: http://example.com/logo.png) (VERSION: 2)
 * **icy-main-stream-url** - [String] Link to load balanced version of this stream. This may be used by stream providers to direct indexers to the main publicly exposed url. Indexers should update their database accordingly.(VERSION: 2)
 * **icy-version** - [Number] The version of this header. 1 is the default. 2 is an extension to the default which is compatible to 1 but adds more headers) (VERSION: 2)
