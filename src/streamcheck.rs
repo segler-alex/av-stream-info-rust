@@ -74,7 +74,7 @@ fn type_is_playlist(content_type: &str) -> bool {
         || type_is_xspf(content_type);
 }
 
-fn type_is_stream(content_type: &str) -> Option<&str> {
+fn type_is_stream_with_oktet(content_type: &str) -> Option<&str> {
     match content_type {
         "audio/mpeg" => Some("MP3"),
         "audio/x-mpeg" => Some("MP3"),
@@ -92,6 +92,24 @@ fn type_is_stream(content_type: &str) -> Option<&str> {
     }
 }
 
+fn type_is_stream_without_oktet(content_type: &str) -> Option<&str> {
+    match content_type {
+        "audio/mpeg" => Some("MP3"),
+        "audio/x-mpeg" => Some("MP3"),
+        "audio/mp3" => Some("MP3"),
+        "audio/aac" => Some("AAC"),
+        "audio/x-aac" => Some("AAC"),
+        "audio/aacp" => Some("AAC+"),
+        "audio/ogg" => Some("OGG"),
+        "application/ogg" => Some("OGG"),
+        "video/ogg" => Some("OGG"),
+        "audio/flac" => Some("FLAC"),
+        "application/flv" => Some("FLV"),
+        _ => None,
+    }
+}
+
+#[derive(Debug,Serialize,Clone)]
 enum LinkType {
     Stream(String),
     Playlist,
@@ -100,10 +118,13 @@ enum LinkType {
 
 fn get_type(content_type: &str, content_length: Option<usize>) -> LinkType {
     let content_type_lower = content_type.to_lowercase();
+    if let Some(stream_type) = type_is_stream_without_oktet(&content_type_lower) {
+        return LinkType::Stream(String::from(stream_type));
+    }
     if type_is_playlist(&content_type_lower) || content_length.is_some() {
         LinkType::Playlist
-    } else if type_is_stream(&content_type_lower).is_some() {
-        LinkType::Stream(String::from(type_is_stream(&content_type_lower).unwrap_or("")))
+    } else if type_is_stream_with_oktet(&content_type_lower).is_some() {
+        LinkType::Stream(String::from(type_is_stream_with_oktet(&content_type_lower).unwrap_or("")))
     } else {
         LinkType::Other
     }
