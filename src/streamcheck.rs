@@ -109,6 +109,13 @@ fn type_is_stream_without_oktet(content_type: &str) -> Option<&str> {
     }
 }
 
+fn type_is_definitelly_not_usefull(content_type: &str) -> bool {
+    if content_type.starts_with("text/html"){
+        return true;
+    }
+    return false;
+}
+
 #[derive(Debug,Serialize,Clone)]
 enum LinkType {
     Stream(String),
@@ -118,6 +125,9 @@ enum LinkType {
 
 fn get_type(content_type: &str, content_length: Option<usize>) -> LinkType {
     let content_type_lower = content_type.to_lowercase();
+    if type_is_definitelly_not_usefull(content_type) {
+        return LinkType::Other;
+    }
     if let Some(stream_type) = type_is_stream_without_oktet(&content_type_lower) {
         return LinkType::Stream(String::from(stream_type));
     }
