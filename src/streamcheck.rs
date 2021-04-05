@@ -110,29 +110,35 @@ fn type_is_stream_without_oktet(content_type: &str) -> Option<&str> {
 }
 
 fn type_is_definitelly_not_usefull(content_type: &str) -> bool {
-    if content_type.starts_with("text/html"){
-        return true;
+    match content_type {
+        "text/html" => true,
+        _ => false,
     }
-    return false;
 }
 
 #[derive(Debug,Serialize,Clone)]
 enum LinkType {
     Stream(String),
-    Playlist,
+    Playlist(String),
     Other
 }
 
-fn get_type(content_type: &str, content_length: Option<usize>) -> LinkType {
-    let content_type_lower = content_type.to_lowercase();
-    if type_is_definitelly_not_usefull(content_type) {
+fn get_type(content_type_header: &str, content_length: Option<usize>) -> LinkType {
+    let content_type_lower = content_type_header.to_lowercase();
+    let mut content_type_header_iter = content_type_header.split(";");
+    let content_type_lower_real = content_type_header_iter.next().unwrap_or("text/html").trim();
+    let content_type_lower_charset = content_type_header_iter.next().unwrap_or("charset=utf-8").trim();
+
+    if type_is_definitelly_not_usefull(content_type_lower_real) {
         return LinkType::Other;
     }
     if let Some(stream_type) = type_is_stream_without_oktet(&content_type_lower) {
         return LinkType::Stream(String::from(stream_type));
     }
     if type_is_playlist(&content_type_lower) || content_length.is_some() {
-        LinkType::Playlist
+        let charset = if content_type_lower_charset.starts_with("charset=") {&content_type_lower_charset[8..]} else {""};
+        trace!("charset: {}", charset);
+        LinkType::Playlist(charset.to_string())
     } else if type_is_stream_with_oktet(&content_type_lower).is_some() {
         LinkType::Stream(String::from(type_is_stream_with_oktet(&content_type_lower).unwrap_or("")))
     } else {
@@ -344,7 +350,7 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                     Some(content_type) => {
                         let link_type = get_type(&content_type, content_length);
                         match link_type {
-                            LinkType::Playlist => list.extend(handle_playlist(request, url, check_all, timeout, max_depth)),
+                            LinkType::Playlist(_charset) => list.extend(handle_playlist(request, url, check_all, timeout, max_depth)),
                             LinkType::Stream(stream_type) => list.push(Ok(handle_stream(request, content_type, url, stream_type))),
                             _ => list.push(Err(StreamCheckError::new(url,&format!("unknown content type {}", content_type),)))
                         };
