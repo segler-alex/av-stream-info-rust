@@ -1,7 +1,7 @@
 //! This library can analyze a http/https address and check if leads to an audio or a video stream
 //! If so, then it will extract information about the stream from its metadata or in case of HLS streams
 //! from its master playlist file.
-//! 
+//!
 //! # Example
 //! ```rust
 //! let list = av_stream_info_rust::check("https://example.com/test.m3u", 10, 3, 3);
@@ -25,12 +25,13 @@ extern crate serde_json;
 
 extern crate tree_magic;
 
-mod request;
-mod streamcheck;
-mod streamdeepscan;
-mod streamcheckerror;
 mod decodeerror;
 mod lat_long;
+mod request;
+mod streamcheck;
+mod streamcheckerror;
+mod streamcheckresult;
+mod streamdeepscan;
 mod streaminfo;
 
 mod http_config;
@@ -38,13 +39,13 @@ mod http_config;
 use std::thread;
 use std::time::Duration;
 
-pub use streaminfo::StreamInfo;
-pub use streamcheckerror::StreamCheckError;
-pub use streamcheck::{StreamCheckResult};
 pub use decodeerror::DecodeError;
 pub use http_config::extract_from_homepage;
-pub use lat_long::LatLong;
 pub use http_config::MetaInfoFile;
+pub use lat_long::LatLong;
+pub use streamcheckerror::StreamCheckError;
+pub use streamcheckresult::StreamCheckResult;
+pub use streaminfo::StreamInfo;
 
 /// Check url for audio/video stream.
 /// # Example
@@ -59,26 +60,20 @@ pub use http_config::MetaInfoFile;
 /// * `timeout` - TCP timeout for connect and read in seconds
 /// * `max_depth` - How many layers of http redirects or playlists should be followed
 /// * `retries` - Retry how many times to find at least one working stream
-pub fn check(
-    url: &str,
-    timeout: u32,
-    max_depth: u8,
-    retries: u8,
-) -> Vec<streamcheck::StreamCheckResult> {
+pub fn check(url: &str, timeout: u32, max_depth: u8, retries: u8) -> Vec<StreamCheckResult> {
     let mut working = false;
-    let mut list: Vec<streamcheck::StreamCheckResult> = Vec::new();
+    let mut list: Vec<StreamCheckResult> = Vec::new();
 
     // check streams
     for _i in 0..retries {
         list = streamcheck::check(url, false, timeout, max_depth);
         for item in list.iter() {
-            match item {
+            match item.info {
                 Ok(_) => {
-                    // find homepage link
                     working = true;
                     break;
                 }
-                &Err(_) => {}
+                Err(_) => {}
             }
         }
 

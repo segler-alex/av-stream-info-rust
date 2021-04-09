@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 use crate::request::Request;
 
+use crate::StreamCheckResult;
 use crate::StreamCheckError;
 use crate::LatLong;
 use crate::StreamInfo;
@@ -12,8 +13,6 @@ use core::convert::TryFrom;
 //use crate::streamdeepscan;
 
 use log::{debug};
-
-pub type StreamCheckResult = Result<StreamInfo, StreamCheckError>;
 
 fn type_is_m3u(content_type: &str) -> bool {
     return content_type == "application/mpegurl" || content_type == "application/x-mpegurl"
@@ -146,7 +145,6 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 Public: None,
                                 IceAudioInfo: None,
                                 AudioInfo: None,
-                                Url: String::from(url),
                                 Type: String::from(""),
                                 Name: None,
                                 Description: None,
@@ -168,7 +166,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 SslError: ssl_error,
                                 GeoLatLong: None,
                             };
-                            list.push(Ok(stream));
+                            list.push(StreamCheckResult::new(url, Ok(stream)));
                             break;
                         }
                     }
@@ -178,7 +176,6 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                             Public: None,
                             IceAudioInfo: None,
                             AudioInfo: None,
-                            Url: String::from(url),
                             Type: String::from(""),
                             Name: None,
                             Description: None,
@@ -200,27 +197,27 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                             SslError: ssl_error,
                             GeoLatLong: None,
                         };
-                        list.push(Ok(stream));
+                        list.push(StreamCheckResult::new(url, Ok(stream)));
                     }
                 }
             }else{
                 let playlist = decode_playlist(url, &content,check_all, timeout, max_depth - 1);
                 if playlist.len() == 0 {
-                    list.push(Err(StreamCheckError::PlaylistEmpty(url.to_string())));
+                    list.push(StreamCheckResult::new(url, Err(StreamCheckError::PlaylistEmpty())));
                 } else {
                     list.extend(playlist);
                 }
             }
         }
         Err(_err)=>{
-            list.push(Err(StreamCheckError::PlaylistReadFailed(url.to_string())));
+            list.push(StreamCheckResult::new(url, Err(StreamCheckError::PlaylistReadFailed())));
         }
     }
     list
 }
 
-fn handle_stream(request: Request, Type: String, url: &str, stream_type: String /* , deep_scan: bool */) -> StreamInfo {
-    debug!("handle_stream(url={})", url);
+fn handle_stream(request: Request, Type: String, stream_type: String /* , deep_scan: bool */) -> StreamInfo {
+    debug!("handle_stream()");
 
     let ssl_error = request.had_ssl_error();
     //if deep_scan {
@@ -276,7 +273,6 @@ fn handle_stream(request: Request, Type: String, url: &str, stream_type: String 
         Public: icy_pub,
         AudioInfo: headers.remove("icy-audio-info"),
         IceAudioInfo: headers.remove("ice-audio-info"),
-        Url: String::from(url),
         Type,
         Name: headers.remove("icy-name"),
         Description: headers.remove("icy-description"),
@@ -319,7 +315,7 @@ fn handle_stream(request: Request, Type: String, url: &str, stream_type: String 
 pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<StreamCheckResult> {
     debug!("check(url={})",url);
     if max_depth == 0{
-        return vec![Err(StreamCheckError::MaxDepthReached(url.to_string()))];
+        return vec![StreamCheckResult::new(url, Err(StreamCheckError::MaxDepthReached()))];
     }
     let request = Request::new(&url, "StreamCheckBot/0.1.0", timeout);
     let mut list: Vec<StreamCheckResult> = vec![];
@@ -333,12 +329,12 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                         let link_type = get_type(&content_type, content_length);
                         match link_type {
                             LinkType::Playlist(_charset) => list.extend(handle_playlist(request, url, check_all, timeout, max_depth)),
-                            LinkType::Stream(stream_type) => list.push(Ok(handle_stream(request, content_type, url, stream_type))),
-                            _ => list.push(Err(StreamCheckError::UnknownContentType(url.to_string(), content_type)))
+                            LinkType::Stream(stream_type) => list.push(StreamCheckResult::new(url, Ok(handle_stream(request, content_type, stream_type)))),
+                            _ => list.push(StreamCheckResult::new(url, Err(StreamCheckError::UnknownContentType(content_type))))
                         };
                     }
                     None => {
-                        list.push(Err(StreamCheckError::MissingContentType(url.to_string())));
+                        list.push(StreamCheckResult::new(url, Err(StreamCheckError::MissingContentType())));
                     }
                 }
             } else if request.info.code >= 300 && request.info.code < 400 {
@@ -350,10 +346,10 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                     None => {}
                 }
             } else {
-                list.push(Err(StreamCheckError::IllegalStatusCode(url.to_string(), request.info.code)));
+                list.push(StreamCheckResult::new(url, Err(StreamCheckError::IllegalStatusCode(request.info.code))));
             }
         }
-        Err(_err) => list.push(Err(StreamCheckError::ConnectionFailed(url.to_string()))),
+        Err(_err) => list.push(StreamCheckResult::new(url, Err(StreamCheckError::ConnectionFailed()))),
     }
     list
 }
@@ -380,7 +376,7 @@ fn decode_playlist(url_str: &str, content: &str, check_all: bool, timeout: u32, 
                                     if !check_all{
                                         let mut found = false;
                                         for result_single in result.iter() {
-                                            if result_single.is_ok() {
+                                            if result_single.info.is_ok() {
                                                 found = true;
                                             }
                                         }
@@ -392,19 +388,19 @@ fn decode_playlist(url_str: &str, content: &str, check_all: bool, timeout: u32, 
                                     list.extend(result);
                                 }
                                 Err(_err) => {
-                                    list.push(Err(StreamCheckError::UrlJoinError(url_str.to_string())));
+                                    list.push(StreamCheckResult::new(url_str, Err(StreamCheckError::UrlJoinError())));
                                 }
                             }
                         }
                     }
                 },
                 Err(_err) => {
-                    list.push(Err(StreamCheckError::PlayListDecodeError(url_str.to_string())));
+                    list.push(StreamCheckResult::new(url_str, Err(StreamCheckError::PlayListDecodeError())));
                 }
             }
         }
         Err(_err) => {
-            list.push(Err(StreamCheckError::UrlParseError(url_str.to_string())));
+            list.push(StreamCheckResult::new(url_str, Err(StreamCheckError::UrlParseError())));
         }
     }
 

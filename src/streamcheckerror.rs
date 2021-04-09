@@ -5,31 +5,31 @@ use std::fmt;
 /// First parameter is the url.
 #[derive(Debug, Clone)]
 pub enum StreamCheckError {
-    ConnectionFailed(String),
-    IllegalStatusCode(String, u32),
-    MaxDepthReached(String),
-    MissingContentType(String),
-    PlayListDecodeError(String),
-    PlaylistEmpty(String),
-    PlaylistReadFailed(String),
-    UnknownContentType(String, String),
-    UrlJoinError(String),
-    UrlParseError(String),
+    ConnectionFailed(),
+    IllegalStatusCode(u32),
+    MaxDepthReached(),
+    MissingContentType(),
+    PlayListDecodeError(),
+    PlaylistEmpty(),
+    PlaylistReadFailed(),
+    UnknownContentType(String),
+    UrlJoinError(),
+    UrlParseError(),
 }
 
 impl fmt::Display for StreamCheckError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            StreamCheckError::ConnectionFailed(url) => write!(f, "ConnectionFailed({})", url),
-            StreamCheckError::IllegalStatusCode(url, code) => write!(f, "IllegalStatusCode({}, {})", url, code),
-            StreamCheckError::MaxDepthReached(url) => write!(f, "MaxDepthReached({})", url),
-            StreamCheckError::MissingContentType(url) => write!(f, "MissingContentType({})", url),
-            StreamCheckError::PlayListDecodeError(url) => write!(f, "PlayListDecodeError({})", url),
-            StreamCheckError::PlaylistEmpty(url) => write!(f, "PlaylistEmpty({})", url),
-            StreamCheckError::PlaylistReadFailed(url) => write!(f, "PlaylistReadFailed({})", url),
-            StreamCheckError::UnknownContentType(url, content_type) => write!(f, "UnknownContentType({}, {})", url, content_type),
-            StreamCheckError::UrlJoinError(url) => write!(f, "UrlJoinError({})", url),
-            StreamCheckError::UrlParseError(url) => write!(f, "UrlParseError({})", url),
+            StreamCheckError::ConnectionFailed() => write!(f, "ConnectionFailed()"),
+            StreamCheckError::IllegalStatusCode(code) => write!(f, "IllegalStatusCode({})", code),
+            StreamCheckError::MaxDepthReached() => write!(f, "MaxDepthReached()"),
+            StreamCheckError::MissingContentType() => write!(f, "MissingContentType()"),
+            StreamCheckError::PlayListDecodeError() => write!(f, "PlayListDecodeError()"),
+            StreamCheckError::PlaylistEmpty() => write!(f, "PlaylistEmpty()"),
+            StreamCheckError::PlaylistReadFailed() => write!(f, "PlaylistReadFailed()"),
+            StreamCheckError::UnknownContentType(content_type) => write!(f, "UnknownContentType({})", content_type),
+            StreamCheckError::UrlJoinError() => write!(f, "UrlJoinError()"),
+            StreamCheckError::UrlParseError() => write!(f, "UrlParseError()"),
         }
     }
 }

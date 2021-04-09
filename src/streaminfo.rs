@@ -13,7 +13,6 @@ pub struct StreamInfo {
     pub Name: Option<String>,
     pub Description: Option<String>,
     pub Type: String,
-    pub Url: String,
     pub Homepage: Option<String>,
     pub Genre: Option<String>,
     pub Bitrate: Option<u32>,

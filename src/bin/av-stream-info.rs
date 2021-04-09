@@ -29,16 +29,17 @@ fn main() {
         Some(url) => {
             let list = check(&url, tcp_timeout, max_depth, retries);
             for item in list {
-                match item {
+                let url = item.url();
+                match &item.info {
                     Ok(item) => {
                         let j = serde_json::to_string(&item).expect("Unable to convert output to JSON format.");
-                        println!("{}", j);
+                        println!(" - {}\n   {}\n\n", url, j);
                         //let codec_video = item.CodecVideo.unwrap_or(String::from("NONE"));
                         //println!("+ {} Audio='{}' Video='{}' Bitrate='{}' (MSG: {})", item.Url, item.CodecAudio, codec_video, item.Bitrate, "OK".green());
                         break;
                     }
                     Err(e) => {
-                        eprintln!("- Error: {}", e.to_string());
+                        eprintln!(" - {}\n   Error: {}", url, e.to_string());
                     }
                 }
             }

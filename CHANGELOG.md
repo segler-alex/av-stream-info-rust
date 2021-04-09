@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 * Enum based errors for check results
+* Restructured check result to make url always available
 
 ## [0.8.4] 2021-04-09
 ### Added
