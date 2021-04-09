@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 * geo-lat-long
 
+### Changed
+* Enum based errors for check results
+
 ## [0.8.4] 2021-04-09
 ### Added
 * Return if there was an ssl error on each check

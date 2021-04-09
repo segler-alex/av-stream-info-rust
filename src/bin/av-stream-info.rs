@@ -1,6 +1,3 @@
-extern crate colored;
-
-use colored::*;
 use std::env;
 use av_stream_info_rust::check;
 extern crate log;
@@ -41,7 +38,7 @@ fn main() {
                         break;
                     }
                     Err(e) => {
-                        eprintln!("- {} (MSG: {})", e.url, e.msg.red());
+                        eprintln!("- Error: {}", e.to_string());
                     }
                 }
             }

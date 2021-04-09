@@ -206,14 +206,14 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
             }else{
                 let playlist = decode_playlist(url, &content,check_all, timeout, max_depth - 1);
                 if playlist.len() == 0 {
-                    list.push(Err(StreamCheckError::new(url, "Empty playlist")));
+                    list.push(Err(StreamCheckError::PlaylistEmpty(url.to_string())));
                 } else {
                     list.extend(playlist);
                 }
             }
         }
-        Err(err)=>{
-            list.push(Err(StreamCheckError::new(url, &err.to_string())));
+        Err(_err)=>{
+            list.push(Err(StreamCheckError::PlaylistReadFailed(url.to_string())));
         }
     }
     list
@@ -319,7 +319,7 @@ fn handle_stream(request: Request, Type: String, url: &str, stream_type: String 
 pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<StreamCheckResult> {
     debug!("check(url={})",url);
     if max_depth == 0{
-        return vec![Err(StreamCheckError::new(url, "max depth reached"))];
+        return vec![Err(StreamCheckError::MaxDepthReached(url.to_string()))];
     }
     let request = Request::new(&url, "StreamCheckBot/0.1.0", timeout);
     let mut list: Vec<StreamCheckResult> = vec![];
@@ -334,14 +334,11 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                         match link_type {
                             LinkType::Playlist(_charset) => list.extend(handle_playlist(request, url, check_all, timeout, max_depth)),
                             LinkType::Stream(stream_type) => list.push(Ok(handle_stream(request, content_type, url, stream_type))),
-                            _ => list.push(Err(StreamCheckError::new(url,&format!("unknown content type {}", content_type),)))
+                            _ => list.push(Err(StreamCheckError::UnknownContentType(url.to_string(), content_type)))
                         };
                     }
                     None => {
-                        list.push(Err(StreamCheckError::new(
-                            url,
-                            "Missing content-type in http header",
-                        )));
+                        list.push(Err(StreamCheckError::MissingContentType(url.to_string())));
                     }
                 }
             } else if request.info.code >= 300 && request.info.code < 400 {
@@ -353,13 +350,10 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                     None => {}
                 }
             } else {
-                list.push(Err(StreamCheckError::new(
-                    url,
-                    &format!("illegal http status code {}", request.info.code),
-                )));
+                list.push(Err(StreamCheckError::IllegalStatusCode(url.to_string(), request.info.code)));
             }
         }
-        Err(err) => list.push(Err(StreamCheckError::new(url, &err.to_string()))),
+        Err(_err) => list.push(Err(StreamCheckError::ConnectionFailed(url.to_string()))),
     }
     list
 }
@@ -397,29 +391,20 @@ fn decode_playlist(url_str: &str, content: &str, check_all: bool, timeout: u32, 
                                     }
                                     list.extend(result);
                                 }
-                                Err(err) => {
-                                    list.push(Err(StreamCheckError::new(
-                                        url_str,
-                                        &err.to_string(),
-                                    )));
+                                Err(_err) => {
+                                    list.push(Err(StreamCheckError::UrlJoinError(url_str.to_string())));
                                 }
                             }
                         }
                     }
                 },
-                Err(err) => {
-                    list.push(Err(StreamCheckError::new(
-                        url_str,
-                        &err.to_string(),
-                    )));
+                Err(_err) => {
+                    list.push(Err(StreamCheckError::PlayListDecodeError(url_str.to_string())));
                 }
             }
         }
-        Err(err) => {
-            list.push(Err(StreamCheckError::new(
-                url_str,
-                &err.to_string(),
-            )));
+        Err(_err) => {
+            list.push(Err(StreamCheckError::UrlParseError(url_str.to_string())));
         }
     }
 

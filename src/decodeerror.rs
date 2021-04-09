@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fmt;
 
+/// Decoding errors for headers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DecodeError {
     LatMissing,
