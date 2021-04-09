@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 * Do not fail on SSL errors but retry on error with ignore ssl errors
+* Decode charset of content type if existing
 
 ## [0.8.3] 2021-04-05
 ### Changed
