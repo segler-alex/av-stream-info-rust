@@ -37,6 +37,7 @@ pub struct StreamInfo {
     pub CountrySubdivisonCode: Option<String>,
     pub LanguageCodes: Vec<String>,
     pub DoNotIndex: Option<bool>,
+    pub SslError: bool,
 }
 
 pub type StreamCheckResult = Result<StreamInfo, StreamCheckError>;
@@ -151,6 +152,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
     let read_result = request.read_content();
     match read_result {
         Ok(_)=>{
+            let ssl_error = request.had_ssl_error();
             let content = request.text();
             let is_hls = playlist_decoder::is_content_hls(&content);
             if is_hls {
@@ -190,6 +192,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 CountrySubdivisonCode: None,
                                 LanguageCodes: vec![],
                                 DoNotIndex: None,
+                                SslError: ssl_error,
                             };
                             list.push(Ok(stream));
                             break;
@@ -220,6 +223,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                             CountrySubdivisonCode: None,
                             LanguageCodes: vec![],
                             DoNotIndex: None,
+                            SslError: ssl_error,
                         };
                         list.push(Ok(stream));
                     }
@@ -243,6 +247,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
 fn handle_stream(request: Request, Type: String, url: &str, stream_type: String /* , deep_scan: bool */) -> StreamInfo {
     debug!("handle_stream(url={})", url);
 
+    let ssl_error = request.had_ssl_error();
     //if deep_scan {
     //    let result = request.read_up_to(50);
     //    if result.is_ok(){
@@ -329,6 +334,7 @@ fn handle_stream(request: Request, Type: String, url: &str, stream_type: String 
         DoNotIndex: headers
             .remove("icy-do-not-index")
             .map(|s| s.parse().unwrap_or(0) == 1),
+        SslError: ssl_error,
     };
 
     stream

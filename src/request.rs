@@ -49,6 +49,7 @@ pub struct Request {
     readable: Box<dyn Read>,
     content_read_done: bool,
     content_vec: Vec<u8>,
+    ssl_error: bool,
 }
 
 use std::net::ToSocketAddrs;
@@ -82,8 +83,24 @@ impl Request {
         stream.set_read_timeout(Some(Duration::from_secs(timeout as u64)))?;
 
         if url.scheme() == "https" {
-            let connector = TlsConnector::builder().build()?;
-            let mut stream = connector.connect(host, stream)?;
+            let mut connector = TlsConnector::builder().build()?;
+            let mut ssl_error = false;
+            let mut sslstream = connector.connect(host, stream);
+            if sslstream.is_err() {
+                // retry connection on error with settings
+                // to ignore ssl errors
+                // return that we have done so
+                let addrs_iter = connect_str.to_socket_addrs()?;
+                let stream: TcpStream = connect(Box::new(addrs_iter), timeout)?;
+                stream.set_read_timeout(Some(Duration::from_secs(timeout as u64)))?;
+                connector = TlsConnector::builder()
+                    .danger_accept_invalid_certs(true)
+                    .danger_accept_invalid_hostnames(true)
+                    .build()?;
+                    sslstream = connector.connect(host, stream);
+                ssl_error = true;
+            }
+            let mut sslstream = sslstream?;
             let mut host_str = String::from(host);
             if port != 443 {
                 host_str = format!("{}:{}", host, port);
@@ -91,16 +108,17 @@ impl Request {
             let query = url.query();
             if let Some(query) = query {
                 let full_path = format!("{}?{}", url.path(), query);
-                Request::send_request(agent, &mut stream, &host_str, &full_path)?;
+                Request::send_request(agent, &mut sslstream, &host_str, &full_path)?;
             } else {
-                Request::send_request(agent, &mut stream, &host_str, url.path())?;
+                Request::send_request(agent, &mut sslstream, &host_str, url.path())?;
             }
-            let header = Request::read_request(&mut stream)?;
+            let header = Request::read_request(&mut sslstream)?;
             Ok(Request {
                 info: header,
-                readable: Box::new(stream),
+                readable: Box::new(sslstream),
                 content_read_done: false,
                 content_vec: vec![],
+                ssl_error,
             })
         } else if url.scheme() == "http" {
             let mut host_str = String::from(host);
@@ -120,6 +138,7 @@ impl Request {
                 readable: Box::new(stream),
                 content_read_done: false,
                 content_vec: vec![],
+                ssl_error: false,
             })
         } else {
             Err(Box::new(RequestError::new("unknown scheme")))
@@ -267,5 +286,9 @@ impl Request {
             }
         }
         Ok(httpinfo)
+    }
+
+    pub fn had_ssl_error(&self) -> bool {
+        self.ssl_error
     }
 }
