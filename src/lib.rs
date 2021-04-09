@@ -44,6 +44,7 @@ pub use streamcheck::{StreamCheckResult};
 pub use decodeerror::DecodeError;
 pub use http_config::extract_from_homepage;
 pub use lat_long::LatLong;
+pub use http_config::MetaInfoFile;
 
 /// Check url for audio/video stream.
 /// # Example

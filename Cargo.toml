@@ -1,6 +1,6 @@
 [package]
 name = "av-stream-info-rust"
-version = "0.8.4"
+version = "0.9.0"
 authors = ["segler <segler_alex@web.de>"]
 repository = "https://github.com/segler-alex/av-stream-info-rust"
 categories = ["network-programming", "parsing"]

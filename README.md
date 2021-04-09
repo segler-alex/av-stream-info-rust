@@ -5,6 +5,18 @@ Analyze the stream's metainformation.
 
 It only uses the HTTP header fields and the first 50 bytes to analyze the stream.
 
+## Example
+Check url for audio/video stream.
+
+```rust
+use av_stream_info_rust;
+
+let list = av_stream_info_rust::check("https://example.com/test.m3u", 10, 3, 3);
+for item in list {
+    println!("{:?}", item);
+}
+```
+
 ## Recognized headers
 
 * **icy-pub** - [Number] Possible values are 0 and 1. 0 means NOT public. 1 means public. (VERSION: 1)

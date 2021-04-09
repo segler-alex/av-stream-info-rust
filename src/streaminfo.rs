@@ -3,6 +3,7 @@
 use crate::DecodeError;
 use crate::LatLong;
 
+/// Information extracted from a stream
 #[derive(Debug, Serialize, Clone)]
 pub struct StreamInfo {
     pub Server: Option<String>,

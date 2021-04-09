@@ -1,9 +1,23 @@
 use crate::DecodeError;
 use std::convert::TryFrom;
 
+/// Represents a geo-location with latitude and longitude. It can be
+/// constructed from a String.
+/// 
+/// # Example
+/// ```rust
+/// use std::convert::TryFrom;
+/// use av_stream_info_rust::LatLong;
+/// 
+/// let lat_long_str = String::from("10.1,-3.1");
+/// let lat_long = LatLong::try_from(lat_long_str).unwrap();
+/// println!("{},{}", lat_long.lat, lat_long.long);
+/// ```
 #[derive(Debug, Serialize, Clone)]
 pub struct LatLong {
+    /// Latitude
     pub lat: f64,
+    /// Longitude
     pub long: f64,
 }
 

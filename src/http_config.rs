@@ -6,6 +6,7 @@ use std::error::Error;
 
 use reqwest::blocking::get;
 
+/// Does contain decoded information from a stream information file
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MetaInfoFile {
     #[serde(rename = "icy-index-metadata")]
@@ -34,6 +35,7 @@ pub struct MetaInfoFile {
 }
 
 impl MetaInfoFile {
+    /// Decodes lat/long information contained in a stream information file
     pub fn get_lat_long(&self) -> Option<Result<LatLong, DecodeError>> {
         self.geo_lat_long.clone().map(|x| LatLong::try_from(x))
     }
