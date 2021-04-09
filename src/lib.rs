@@ -1,6 +1,14 @@
 //! This library can analyze a http/https address and check if leads to an audio or a video stream
 //! If so, then it will extract information about the stream from its metadata or in case of HLS streams
 //! from its master playlist file.
+//! 
+//! # Example
+//! ```rust
+//! let list = av_stream_info_rust::check("https://example.com/test.m3u", 10, 3, 3);
+//! for item in list {
+//!     println!("{:?}", item);
+//! }
+//! ```
 
 extern crate hls_m3u8;
 #[macro_use]
@@ -21,15 +29,21 @@ mod request;
 mod streamcheck;
 mod streamdeepscan;
 mod streamcheckerror;
+mod decodeerror;
+mod lat_long;
+mod streaminfo;
 
 mod http_config;
 
 use std::thread;
 use std::time::Duration;
 
+pub use streaminfo::StreamInfo;
 pub use streamcheckerror::StreamCheckError;
-pub use streamcheck::{StreamCheckResult, StreamInfo};
+pub use streamcheck::{StreamCheckResult};
+pub use decodeerror::DecodeError;
 pub use http_config::extract_from_homepage;
+pub use lat_long::LatLong;
 
 /// Check url for audio/video stream.
 /// # Example

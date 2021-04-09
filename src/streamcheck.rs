@@ -1,7 +1,9 @@
 #![allow(non_snake_case)]
 use crate::request::Request;
 
-use crate::streamcheckerror::StreamCheckError;
+use crate::StreamCheckError;
+use crate::LatLong;
+use crate::StreamInfo;
 
 use playlist_decoder;
 use url::Url;
@@ -10,35 +12,6 @@ use core::convert::TryFrom;
 //use crate::streamdeepscan;
 
 use log::{debug};
-
-#[derive(Debug,Serialize,Clone)]
-pub struct StreamInfo {
-    pub Server: Option<String>,
-    pub Public: Option<bool>,
-    pub IceAudioInfo: Option<String>,
-    pub AudioInfo: Option<String>,
-    pub Name: Option<String>,
-    pub Description: Option<String>,
-    pub Type: String,
-    pub Url: String,
-    pub Homepage: Option<String>,
-    pub Genre: Option<String>,
-    pub Bitrate: Option<u32>,
-    pub Sampling: Option<u32>,
-    pub CodecAudio: String,
-    pub CodecVideo: Option<String>,
-    pub Hls: bool,
-
-    pub LogoUrl: Option<String>,
-    pub MainStreamUrl: Option<String>,
-    pub IcyVersion: u32,
-    pub OverrideIndexMetaData: Option<bool>,
-    pub CountryCode: Option<String>,
-    pub CountrySubdivisonCode: Option<String>,
-    pub LanguageCodes: Vec<String>,
-    pub DoNotIndex: Option<bool>,
-    pub SslError: bool,
-}
 
 pub type StreamCheckResult = Result<StreamInfo, StreamCheckError>;
 
@@ -193,6 +166,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 LanguageCodes: vec![],
                                 DoNotIndex: None,
                                 SslError: ssl_error,
+                                GeoLatLong: None,
                             };
                             list.push(Ok(stream));
                             break;
@@ -224,6 +198,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                             LanguageCodes: vec![],
                             DoNotIndex: None,
                             SslError: ssl_error,
+                            GeoLatLong: None,
                         };
                         list.push(Ok(stream));
                     }
@@ -331,6 +306,7 @@ fn handle_stream(request: Request, Type: String, url: &str, stream_type: String 
         CountryCode: headers.remove("icy-country-code"),
         CountrySubdivisonCode: headers.remove("icy-country-subdivision-code"),
         LanguageCodes,
+        GeoLatLong: headers.remove("icy-geo-lat-long").map(|x| LatLong::try_from(x)),
         DoNotIndex: headers
             .remove("icy-do-not-index")
             .map(|s| s.parse().unwrap_or(0) == 1),

@@ -24,6 +24,7 @@ It only uses the HTTP header fields and the first 50 bytes to analyze the stream
 * **icy-country-code** - [String] 2 letter countrycode. (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) (VERSION: 2)
 * **icy-country-subdivision-code** - [String] Code of the subdivision of a country. (https://en.wikipedia.org/wiki/ISO_3166-2) (VERSION: 2)
 * **icy-language-codes** - [String] Multiple comma delimited language-codes in the format ISO 639-1 (https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) or ISO 639-3 (https://en.wikipedia.org/wiki/ISO_639-3). (VERSION: 2)
+* **icy-geo-lat-long** - [String] 2 comma delimited decimal values. (VERSION: 2)
 * **icy-do-not-index** - [Number] If a stream operator wants this stream to be absolutely private, this option can be set to 1.
 
 ## Additional information

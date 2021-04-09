@@ -1,3 +1,6 @@
+use crate::DecodeError;
+use crate::LatLong;
+use std::convert::TryFrom;
 use serde::de::{self, Deserialize, Deserializer, Unexpected};
 use std::error::Error;
 
@@ -26,6 +29,14 @@ pub struct MetaInfoFile {
     pub country_subdivision_code: Option<String>,
     #[serde(rename = "icy-logo")]
     pub logo: Option<String>,
+    #[serde(rename = "icy-geo-lat-long")]
+    geo_lat_long: Option<String>,
+}
+
+impl MetaInfoFile {
+    pub fn get_lat_long(&self) -> Option<Result<LatLong, DecodeError>> {
+        self.geo_lat_long.clone().map(|x| LatLong::try_from(x))
+    }
 }
 
 pub fn extract_from_homepage(homepage: &str) -> Result<MetaInfoFile, Box<dyn Error>> {
