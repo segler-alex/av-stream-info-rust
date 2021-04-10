@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt;
+use serde::{Deserialize, Serialize};
 
 /// Decoding errors for headers
 #[derive(Debug, Clone, Serialize, Deserialize)]

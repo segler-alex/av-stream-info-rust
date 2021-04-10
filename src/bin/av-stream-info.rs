@@ -1,5 +1,5 @@
 use std::env;
-use av_stream_info_rust::check;
+use av_stream_info_rust::check_tree;
 extern crate log;
 extern crate env_logger;
 
@@ -27,22 +27,8 @@ fn main() {
 
     match env::args().nth(1) {
         Some(url) => {
-            let list = check(&url, tcp_timeout, max_depth, retries);
-            for item in list {
-                let url = item.url();
-                match &item.info {
-                    Ok(item) => {
-                        let j = serde_json::to_string(&item).expect("Unable to convert output to JSON format.");
-                        println!(" - {}\n   {}\n\n", url, j);
-                        //let codec_video = item.CodecVideo.unwrap_or(String::from("NONE"));
-                        //println!("+ {} Audio='{}' Video='{}' Bitrate='{}' (MSG: {})", item.Url, item.CodecAudio, codec_video, item.Bitrate, "OK".green());
-                        break;
-                    }
-                    Err(e) => {
-                        eprintln!(" - {}\n   Error: {}", url, e.to_string());
-                    }
-                }
-            }
+            let item = check_tree(&url, tcp_timeout, max_depth, retries, true);
+            println!("{:#?}", item);
         }
         None => {
             eprintln!("1 parameter needed");

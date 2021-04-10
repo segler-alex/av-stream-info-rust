@@ -1,5 +1,6 @@
 use crate::DecodeError;
 use std::convert::TryFrom;
+use serde::{Deserialize, Serialize};
 
 /// Represents a geo-location with latitude and longitude. It can be
 /// constructed from a String.
@@ -13,7 +14,7 @@ use std::convert::TryFrom;
 /// let lat_long = LatLong::try_from(lat_long_str).unwrap();
 /// println!("{},{}", lat_long.lat, lat_long.long);
 /// ```
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LatLong {
     /// Latitude
     pub lat: f64,

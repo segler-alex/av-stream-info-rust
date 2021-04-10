@@ -1,7 +1,7 @@
 [package]
 name = "av-stream-info-rust"
-version = "0.9.0"
-authors = ["segler <segler_alex@web.de>"]
+version = "0.10.0"
+authors = ["segler_alex <segler_alex@web.de>"]
 repository = "https://github.com/segler-alex/av-stream-info-rust"
 categories = ["network-programming", "parsing"]
 license = "MIT"
@@ -16,8 +16,7 @@ log = "0.4.14"
 native-tls = "0.2.7"
 playlist-decoder = "0.8.2"
 reqwest = { version = "0.11.2", features = ["blocking"] }
-serde = "1.0.125"
-serde_derive = "1.0.125"
+serde = { version = "1.0.125", features = ["derive"] }
 serde_json = "1.0.64"
 tree_magic = "0.2.3"
 url = "2.2.1"

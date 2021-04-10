@@ -1,9 +1,11 @@
 use std::error::Error;
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 /// Posible errors for stream checking.
 /// First parameter is the url.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StreamCheckError {
     ConnectionFailed(),
     IllegalStatusCode(u32),
@@ -15,6 +17,7 @@ pub enum StreamCheckError {
     UnknownContentType(String),
     UrlJoinError(),
     UrlParseError(),
+    NoLocationFieldForRedirect(),
 }
 
 impl fmt::Display for StreamCheckError {
@@ -30,6 +33,7 @@ impl fmt::Display for StreamCheckError {
             StreamCheckError::UnknownContentType(content_type) => write!(f, "UnknownContentType({})", content_type),
             StreamCheckError::UrlJoinError() => write!(f, "UrlJoinError()"),
             StreamCheckError::UrlParseError() => write!(f, "UrlParseError()"),
+            StreamCheckError::NoLocationFieldForRedirect() => write!(f, "NoLocationFieldForRedirect()"),
         }
     }
 }

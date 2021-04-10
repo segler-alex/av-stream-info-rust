@@ -1,13 +1,14 @@
 use crate::DecodeError;
 use crate::LatLong;
 use std::convert::TryFrom;
-use serde::de::{self, Deserialize, Deserializer, Unexpected};
+use serde::de::{self, Deserializer, Unexpected};
 use std::error::Error;
+use serde::{Deserialize, Serialize};
 
 use reqwest::blocking::get;
 
 /// Does contain decoded information from a stream information file
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MetaInfoFile {
     #[serde(rename = "icy-index-metadata")]
     #[serde(deserialize_with = "bool_from_int")]

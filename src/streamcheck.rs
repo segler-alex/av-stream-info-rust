@@ -5,11 +5,13 @@ use crate::StreamCheckResult;
 use crate::StreamCheckError;
 use crate::LatLong;
 use crate::StreamInfo;
+use crate::UrlType;
 
 use playlist_decoder;
 use url::Url;
 use hls_m3u8::MasterPlaylist;
 use core::convert::TryFrom;
+use serde::{Deserialize, Serialize};
 //use crate::streamdeepscan;
 
 use log::{debug};
@@ -89,37 +91,41 @@ fn type_is_definitelly_not_usefull(content_type: &str) -> bool {
     }
 }
 
-#[derive(Debug,Serialize,Clone)]
+#[derive(Debug,Serialize,Deserialize,Clone)]
 enum LinkType {
     Stream(String),
     Playlist(String),
     Other
 }
 
-fn get_type(content_type_header: &str, content_length: Option<usize>) -> LinkType {
-    let content_type_lower = content_type_header.to_lowercase();
+fn decode_content_type(content_type_header: &str) -> (String,String){
+    let content_type_header = content_type_header.to_lowercase();
     let mut content_type_header_iter = content_type_header.split(";");
     let content_type_lower_real = content_type_header_iter.next().unwrap_or("text/html").trim();
     let content_type_lower_charset = content_type_header_iter.next().unwrap_or("charset=utf-8").trim();
 
-    if type_is_definitelly_not_usefull(content_type_lower_real) {
+    (content_type_lower_real.to_string(), content_type_lower_charset.to_string())
+}
+
+fn get_type(content_type_header: &str, charset: &str, content_length: Option<usize>) -> LinkType {
+    if type_is_definitelly_not_usefull(content_type_header) {
         return LinkType::Other;
     }
-    if let Some(stream_type) = type_is_stream_without_oktet(&content_type_lower) {
+    if let Some(stream_type) = type_is_stream_without_oktet(&content_type_header) {
         return LinkType::Stream(String::from(stream_type));
     }
-    if type_is_playlist(&content_type_lower) || content_length.is_some() {
-        let charset = if content_type_lower_charset.starts_with("charset=") {&content_type_lower_charset[8..]} else {""};
+    if type_is_playlist(&content_type_header) || content_length.is_some() {
+        let charset = if charset.starts_with("charset=") {&charset[8..]} else {""};
         trace!("charset: {}", charset);
         LinkType::Playlist(charset.to_string())
-    } else if type_is_stream_with_oktet(&content_type_lower).is_some() {
-        LinkType::Stream(String::from(type_is_stream_with_oktet(&content_type_lower).unwrap_or("")))
+    } else if type_is_stream_with_oktet(&content_type_header).is_some() {
+        LinkType::Stream(String::from(type_is_stream_with_oktet(&content_type_header).unwrap_or("")))
     } else {
         LinkType::Other
     }
 }
 
-fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<StreamCheckResult> {
+fn handle_playlist(mut request: Request, url: &str, early_exit_on_first_ok: bool, timeout: u32, max_depth: u8) -> Vec<StreamCheckResult> {
     let mut list: Vec<StreamCheckResult> = vec![];
     let read_result = request.read_content();
     match read_result {
@@ -166,7 +172,7 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                                 SslError: ssl_error,
                                 GeoLatLong: None,
                             };
-                            list.push(StreamCheckResult::new(url, Ok(stream)));
+                            list.push(StreamCheckResult::new(url, Ok(UrlType::Stream(stream))));
                             break;
                         }
                     }
@@ -197,15 +203,31 @@ fn handle_playlist(mut request: Request, url: &str, check_all: bool, timeout: u3
                             SslError: ssl_error,
                             GeoLatLong: None,
                         };
-                        list.push(StreamCheckResult::new(url, Ok(stream)));
+                        list.push(StreamCheckResult::new(url, Ok(UrlType::Stream(stream))));
                     }
                 }
             }else{
-                let playlist = decode_playlist(url, &content,check_all, timeout, max_depth - 1);
-                if playlist.len() == 0 {
-                    list.push(StreamCheckResult::new(url, Err(StreamCheckError::PlaylistEmpty())));
-                } else {
-                    list.extend(playlist);
+                let playlist = decode_playlist(url, &content);
+                match playlist {
+                    Ok(playlist) => {
+                        if playlist.len() == 0 {
+                            list.push(StreamCheckResult::new(url, Err(StreamCheckError::PlaylistEmpty())));
+                        } else {
+                            for playlist_item in playlist {
+                                let result = check(&playlist_item, early_exit_on_first_ok, timeout, max_depth);
+                                let result_ok = result.info.is_ok();
+                                list.push(result);
+
+                                // early exit on the first found working stream
+                                if early_exit_on_first_ok && result_ok {
+                                    break;
+                                }
+                            }
+                        }
+                    },
+                    Err(err) => {
+                        list.push(StreamCheckResult::new(url, Err(err)));
+                    }
                 }
             }
         }
@@ -312,13 +334,12 @@ fn handle_stream(request: Request, Type: String, stream_type: String /* , deep_s
     stream
 }
 
-pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<StreamCheckResult> {
+pub fn check(url: &str, early_exit_on_first_ok: bool, timeout: u32, max_depth: u8) -> StreamCheckResult {
     debug!("check(url={})",url);
     if max_depth == 0{
-        return vec![StreamCheckResult::new(url, Err(StreamCheckError::MaxDepthReached()))];
+        return StreamCheckResult::new(url, Err(StreamCheckError::MaxDepthReached()));
     }
     let request = Request::new(&url, "StreamCheckBot/0.1.0", timeout);
-    let mut list: Vec<StreamCheckResult> = vec![];
     match request {
         Ok(mut request) => {
             if request.info.code >= 200 && request.info.code < 300 {
@@ -326,85 +347,48 @@ pub fn check(url: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<Str
                 let content_length = request.content_length().ok();
                 match content_type {
                     Some(content_type) => {
-                        let link_type = get_type(&content_type, content_length);
+                        let (content_type, content_charset) = decode_content_type(&content_type);
+                        let link_type = get_type(&content_type, &content_charset, content_length);
                         match link_type {
-                            LinkType::Playlist(_charset) => list.extend(handle_playlist(request, url, check_all, timeout, max_depth)),
-                            LinkType::Stream(stream_type) => list.push(StreamCheckResult::new(url, Ok(handle_stream(request, content_type, stream_type)))),
-                            _ => list.push(StreamCheckResult::new(url, Err(StreamCheckError::UnknownContentType(content_type))))
-                        };
+                            LinkType::Playlist(_charset) => StreamCheckResult::new(url, Ok(UrlType::PlayList(handle_playlist(request, url, early_exit_on_first_ok, timeout, max_depth)))),
+                            LinkType::Stream(stream_type) => StreamCheckResult::new(url, Ok(UrlType::Stream(handle_stream(request, content_type.to_string(), stream_type)))),
+                            _ => StreamCheckResult::new(url, Err(StreamCheckError::UnknownContentType(content_type.to_string())))
+                        }
                     }
-                    None => {
-                        list.push(StreamCheckResult::new(url, Err(StreamCheckError::MissingContentType())));
-                    }
+                    None => StreamCheckResult::new(url, Err(StreamCheckError::MissingContentType()))
                 }
             } else if request.info.code >= 300 && request.info.code < 400 {
                 let location = request.info.headers.get("location");
                 match location {
-                    Some(location) => {
-                        list.extend(check(location,check_all, timeout,max_depth - 1));
-                    }
-                    None => {}
+                    Some(location) => StreamCheckResult::new(url, Ok(UrlType::Redirect(Box::new(check(location,early_exit_on_first_ok, timeout,max_depth - 1))))),
+                    None => StreamCheckResult::new(url, Err(StreamCheckError::NoLocationFieldForRedirect()))
                 }
             } else {
-                list.push(StreamCheckResult::new(url, Err(StreamCheckError::IllegalStatusCode(request.info.code))));
+                StreamCheckResult::new(url, Err(StreamCheckError::IllegalStatusCode(request.info.code)))
             }
         }
-        Err(_err) => list.push(StreamCheckResult::new(url, Err(StreamCheckError::ConnectionFailed()))),
+        Err(_err) => StreamCheckResult::new(url, Err(StreamCheckError::ConnectionFailed())),
     }
-    list
 }
 
-fn decode_playlist(url_str: &str, content: &str, check_all: bool, timeout: u32, max_depth: u8) -> Vec<StreamCheckResult> {
+/// Decode playlist to list of urls
+/// Resolve relative urls in playlist with original url as base
+fn decode_playlist(url_str: &str, content: &str) -> Result<Vec<String>, StreamCheckError> {
     let mut list = vec![];
-    let base_url = Url::parse(url_str);
-    match base_url {
-        Ok(base_url) => {
-            let urls = playlist_decoder::decode(content);
-            match urls {
-                Ok(urls) => {
-                    let mut max_urls = 10;
-                    for url in urls {
-                        max_urls = max_urls - 1;
-                        if max_urls == 0{
-                            break;
-                        }
-                        if url.trim() != "" {
-                            let abs_url = base_url.join(&url);
-                            match abs_url {
-                                Ok(abs_url) => {
-                                    let result = check(&abs_url.as_str(),check_all, timeout, max_depth);
-                                    if !check_all{
-                                        let mut found = false;
-                                        for result_single in result.iter() {
-                                            if result_single.info.is_ok() {
-                                                found = true;
-                                            }
-                                        }
-                                        if found{
-                                            list.extend(result);
-                                            break;
-                                        }
-                                    }
-                                    list.extend(result);
-                                }
-                                Err(_err) => {
-                                    list.push(StreamCheckResult::new(url_str, Err(StreamCheckError::UrlJoinError())));
-                                }
-                            }
-                        }
-                    }
-                },
-                Err(_err) => {
-                    list.push(StreamCheckResult::new(url_str, Err(StreamCheckError::PlayListDecodeError())));
-                }
-            }
+    let base_url = Url::parse(url_str).or(Err(StreamCheckError::UrlParseError()))?;
+    let urls = playlist_decoder::decode(content).or(Err(StreamCheckError::PlayListDecodeError()))?;
+    let mut max_urls = 10;
+    for url in urls {
+        if max_urls == 0 {
+            break;
         }
-        Err(_err) => {
-            list.push(StreamCheckResult::new(url_str, Err(StreamCheckError::UrlParseError())));
+        if url.trim() != "" {
+            list.push(base_url.join(&url).or(Err(StreamCheckError::UrlJoinError()))?.to_string());
+            max_urls = max_urls - 1;
         }
     }
 
-    list
+    Ok(list)
 }
 
 fn decode_hls_codecs(codecs_raw: &str) -> (String,Option<String>) {
