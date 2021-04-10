@@ -49,16 +49,15 @@ pub use streaminfo::StreamInfo;
 /// Check url for audio/video stream.
 /// # Example
 /// ```rust
-/// let list = av_stream_info_rust::check("https://example.com/test.m3u", 10, 3, 3);
-/// for item in list {
-///     println!("{:?}", item);
-/// }
+/// let item = av_stream_info_rust::check("https://example.com/test.m3u", 10, 3, 3, true);
+/// println!("{:#?}", item);
 /// ```
 /// # Arguments
 /// * `url` - The url to check
 /// * `timeout` - TCP timeout for connect and read in seconds
 /// * `max_depth` - How many layers of http redirects or playlists should be followed
 /// * `retries` - Retry how many times to find at least one working stream
+/// * `early_exit_on_first_ok` - return from checking as early as 1 working stream has been found
 pub fn check_tree(url: &str, timeout: u32, max_depth: u8, mut retries: u8, early_exit_on_first_ok: bool) -> StreamCheckResult {
     loop {
         let result = streamcheck::check(url, early_exit_on_first_ok, timeout, max_depth);

@@ -11,10 +11,8 @@ Check url for audio/video stream.
 ```rust
 use av_stream_info_rust;
 
-let list = av_stream_info_rust::check("https://example.com/test.m3u", 10, 3, 3);
-for item in list {
-    println!("{:?}", item);
-}
+let item = av_stream_info_rust::check("https://example.com/test.m3u", 10, 3, 3);
+println!("{:#?}", item);
 ```
 
 ## Recognized headers
