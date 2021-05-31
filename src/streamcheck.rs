@@ -214,6 +214,11 @@ fn handle_playlist(mut request: Request, url: &str, early_exit_on_first_ok: bool
                             list.push(StreamCheckResult::new(url, Err(StreamCheckError::PlaylistEmpty())));
                         } else {
                             for playlist_item in playlist {
+                                // ignore self references
+                                if url == playlist_item {
+                                    warn!("found self reference in playlist: '{}'", url);
+                                    continue;
+                                }
                                 let result = check(&playlist_item, early_exit_on_first_ok, timeout, max_depth);
                                 let result_ok = result.info.is_ok();
                                 list.push(result);
@@ -350,7 +355,7 @@ pub fn check(url: &str, early_exit_on_first_ok: bool, timeout: u32, max_depth: u
                         let (content_type, content_charset) = decode_content_type(&content_type);
                         let link_type = get_type(&content_type, &content_charset, content_length);
                         match link_type {
-                            LinkType::Playlist(_charset) => StreamCheckResult::new(url, Ok(UrlType::PlayList(handle_playlist(request, url, early_exit_on_first_ok, timeout, max_depth)))),
+                            LinkType::Playlist(_charset) => StreamCheckResult::new(url, Ok(UrlType::PlayList(handle_playlist(request, url, early_exit_on_first_ok, timeout, max_depth - 1)))),
                             LinkType::Stream(stream_type) => StreamCheckResult::new(url, Ok(UrlType::Stream(handle_stream(request, content_type.to_string(), stream_type)))),
                             _ => StreamCheckResult::new(url, Err(StreamCheckError::UnknownContentType(content_type.to_string())))
                         }

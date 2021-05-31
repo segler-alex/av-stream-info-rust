@@ -11,7 +11,7 @@ fn main() {
         .parse()
         .expect("TCP_TIMEOUT is not u32");
     let max_depth: u8 = env::var("MAX_DEPTH")
-        .unwrap_or(String::from("5"))
+        .unwrap_or(String::from("3"))
         .parse()
         .expect("MAX_DEPTH is not u8");
     let retries: u8 = env::var("RETRIES")

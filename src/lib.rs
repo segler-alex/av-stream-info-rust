@@ -49,7 +49,7 @@ pub use streaminfo::StreamInfo;
 /// Check url for audio/video stream.
 /// # Example
 /// ```rust
-/// let item = av_stream_info_rust::check("https://example.com/test.m3u", 10, 3, 3, true);
+/// let item = av_stream_info_rust::check_tree("https://example.com/test.m3u", 10, 3, 3, true);
 /// println!("{:#?}", item);
 /// ```
 /// # Arguments
