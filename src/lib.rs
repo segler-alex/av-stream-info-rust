@@ -21,7 +21,7 @@ extern crate url;
 extern crate serde;
 extern crate serde_json;
 
-extern crate tree_magic;
+//extern crate tree_magic;
 
 mod decodeerror;
 mod lat_long;
