@@ -1,3 +1,6 @@
+# THIS PROJECT MOVED TO GITLAB
+[https://gitlab.com/radiobrowser/libraries/av-stream-info-rust](https://gitlab.com/radiobrowser/libraries/av-stream-info-rust)
+
 # av-stream-info-rust
 
 Check a http/https address if it leads to an audio or a video stream.
